@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from datetime import datetime
 from typing import Any, Dict, Union
 
 from core.domain.ebay.question import EbayMetadata
@@ -9,6 +10,11 @@ from pydantic import BaseModel
 
 class ErrorResponse(BaseModel):
     error: str
+
+
+class TokenResponse(BaseModel):
+    token: str
+    expires_at: datetime
 
 
 class ProductCategoriesResponse(BaseModel):
@@ -55,7 +61,6 @@ ItemUnion = Union[EbayMetadata, Metadata]
 class ItemResponse(BaseModel):
     title: str
     description: str
-    condition: str
     price: float
     currency: str
     country: str
@@ -72,7 +77,6 @@ class ItemResponse(BaseModel):
         return cls(
             title=item.title,
             description=item.description,
-            condition=item.condition,
             price=item.price,
             currency=item.currency,
             country=item.country,

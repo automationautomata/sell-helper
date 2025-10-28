@@ -7,6 +7,11 @@ from pydantic import BaseModel, model_validator
 from .common import Package
 
 
+class UserSingInRequest(BaseModel):
+    email: str
+    password: str
+
+
 class ProductRequest(BaseModel):
     product_name: str
     category: str

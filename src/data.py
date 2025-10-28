@@ -29,6 +29,8 @@ class EnvKeys:
 
     EBAY_PRODUCTION_REFRESH_TOKEN = "EBAY_PRODUCTION_REFRESH_TOKEN"
 
+    JWT_SECRET = "JWT_SECRET"
+
     @staticmethod
     def setting_ebay_mode(mode: Literal["sandbox", "production"]):
         if mode == "sandbox":
