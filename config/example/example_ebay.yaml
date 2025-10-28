@@ -1,0 +1,23 @@
+production:
+    domain: api.ebay.com
+    appid: <something>
+    devid: <something>
+    certid: <something>
+    redirecturi: <something>
+    marketplace: ru
+    listing_policies:
+        fulfillment_policy_id: <something>
+        payment_policy_id: <something>
+        return_policy_id: <something>
+
+sandbox:
+    domain: api.sandbox.ebay.com
+    appid: <something>
+    devid: <something>
+    certid: <something>
+    redirecturi: <something>
+    marketplace: ru
+    listing_policies:
+        fulfillment_policy_id: <something>
+        payment_policy_id: <something>
+        return_policy_id: <something>
