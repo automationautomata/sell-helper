@@ -14,7 +14,7 @@ class ErrorResponse(BaseModel):
 
 class TokenResponse(BaseModel):
     token: str
-    expires_at: datetime
+    ttl: int
 
 
 class ProductCategoriesResponse(BaseModel):

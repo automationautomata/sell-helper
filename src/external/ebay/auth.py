@@ -43,7 +43,7 @@ class EbayAuthClient:
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": f"Basic {base64.b64encode(auth_str.encode()).decode()}",
         }
-        data = {
+        payload = {
             "grant_type": "refresh_token",
             "refresh_token": os.getenv(EnvKeys.EBAY_REFRESH_TOKEN),
             "scopes": SCOPES,
@@ -51,8 +51,10 @@ class EbayAuthClient:
 
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.post(url, data=data, headers=headers) as resp:
-                    data = await resp.json()
+                async with session.post(url, data=payload, headers=headers) as resp:
+                    data = None
+                    if resp.content.total_bytes != 0:
+                        data = await resp.json()
                     resp.raise_for_status()
                 return models.RefreshTokenResponse.model_validate(data)
 

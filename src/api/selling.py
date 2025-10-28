@@ -1,18 +1,26 @@
-from dataclasses import asdict
 import os
 import tempfile
 from typing import List, Union
 
 import aiofiles
+from api.dependencies import SellingServicesFactory
+from api.models.common import Marketplace
 from core.services.selling import (
     CategoryNotFound,
     ItemData,
     SellingError,
-    SellingServiceABC,
 )
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute, FromDishka  # noqa: F811
-from fastapi import APIRouter, Body, Depends, File, Form, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Body,
+    File,
+    Path,
+    Response,
+    UploadFile,
+    status,
+)
 from logger import logger
 from utils import utils
 
@@ -25,10 +33,12 @@ router = APIRouter(route_class=DishkaRoute)
 @router.post("/{marketplace}/sell", response_model=Union[ItemResponse, ErrorResponse])
 async def sell_item(
     response: Response,
-    seller: FromDishka[SellingServiceABC],
+    selling_factory: FromDishka[SellingServicesFactory],
     item: SellItemRequest = Body(...),
     images: List[UploadFile] = File(...),
+    marketplace: Marketplace = Path(...),
 ):
+    seller = selling_factory(marketplace)
     with tempfile.TemporaryDirectory(prefix="selling_images_") as tmpdir:
         try:
             images_pathes = []

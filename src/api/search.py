@@ -3,10 +3,11 @@ import tempfile
 from typing import Union
 
 import aiofiles
-from core.services.search import SearchError, SearchServiceABC
-from dishka import FromDishka
+from api.dependencies import SerachServicesFactory
+from api.models.common import Marketplace
+from core.services.search import SearchError
 from dishka.integrations.fastapi import DishkaRoute, FromDishka  # noqa: F811
-from fastapi import APIRouter, File, Response, UploadFile, status
+from fastapi import APIRouter, File, Path, Response, UploadFile, status
 from logger import logger
 from utils import utils
 
@@ -20,13 +21,15 @@ router = APIRouter(route_class=DishkaRoute)
     "/{marketplace}/product", response_model=Union[ProductResponse, ErrorResponse]
 )
 async def search_by_product_name(
-    request: ProductRequest,
-    searcher: FromDishka[SearchServiceABC],
+    product: ProductRequest,
     response: Response,
+    search_factory: FromDishka[SerachServicesFactory],
+    marketplace: str = Path(...),
 ):
+    searcher = search_factory(marketplace)
     try:
         answer = searcher.product(
-            request.product_name, request.category, request.comment
+            product.product_name, product.category, product.comment
         )
     except SearchError as e:
         logger.exception(f"Cannot process product: {e}", exc_info=True)
@@ -43,9 +46,11 @@ async def search_by_product_name(
 )
 async def search_product_categories(
     response: Response,
-    searcher: FromDishka[SearchServiceABC],
+    search_factory: FromDishka[SerachServicesFactory],
     image: UploadFile = File(...),
+    marketplace: Marketplace = Path(...),
 ):
+    searcher = search_factory(marketplace)
     with tempfile.TemporaryDirectory(prefix="search_by_image_") as temp_dir:
         try:
             temp_path = os.path.join(

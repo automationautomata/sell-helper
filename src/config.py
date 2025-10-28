@@ -27,9 +27,14 @@ class PerplexityConfig(BaseModel):
     model: str
 
 
+class DBConfig(BaseModel):
+    connection_string: str
+
+
 class Config(BaseModel):
     perplexity: PerplexityConfig
     ebay: Dict[str, EbayConfig]
+    db: DBConfig
 
 
 def _load_yaml(path: str) -> Dict:
@@ -43,6 +48,7 @@ def load_config():
         EnvKeys.PERPLEXITY_CONFIG_PATH, Pathes.PERPLEXITY_CONFIG
     )
     return Config(
+        db=DBConfig(connection_string=os.getenv(EnvKeys.DB)),
         perplexity=PerplexityConfig.model_validate(_load_yaml(perplexity_path)),
         ebay={
             k: EbayConfig.model_validate(v) for k, v in _load_yaml(ebay_path).items()

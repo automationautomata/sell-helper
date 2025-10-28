@@ -31,6 +31,8 @@ class EnvKeys:
 
     JWT_SECRET = "JWT_SECRET"
 
+    DB = "DB"
+
     @staticmethod
     def setting_ebay_mode(mode: Literal["sandbox", "production"]):
         if mode == "sandbox":

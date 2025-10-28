@@ -6,7 +6,7 @@ from ..infrastructure.adapter import InvalidProduct, QuestionAdapterABC, Validat
 from ..infrastructure.marketplace import MarketplaceAPI
 from ..infrastructure.search import (
     CategoriesNotFoundError,
-    SearchEngineABC,
+    SearchEngine,
     SearchEngineError,
 )
 
@@ -42,7 +42,7 @@ class SearchServiceABC(ABC):
 class SearchService(SearchServiceABC):
     def __init__(
         self,
-        search: SearchEngineABC,
+        search: SearchEngine,
         marketplace_api: MarketplaceAPI,
         adapter: QuestionAdapterABC,
         metadata_type: TMetadata,

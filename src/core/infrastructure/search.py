@@ -2,7 +2,7 @@ import json
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Literal, Optional
 
-from config import EbayConfig
+from config import EbayConfig, PerplexityConfig
 from external import barcode_search
 from external.ebay.taxonomy import (
     EbayCategoriesNotFoundError,
@@ -24,7 +24,7 @@ class CategoriesNotFoundError(SearchEngineError):
     pass
 
 
-class SearchEngineABC(ABC):
+class SearchEngine(ABC):
     @abstractmethod
     def by_product_name(
         self, product_name: str, comment: str, json_schema: Dict[str, Any]
@@ -45,16 +45,18 @@ class SearchEngineABC(ABC):
         pass
 
 
-class PerplexityAndEbaySearch(SearchEngineABC):
+class PerplexityAndEbaySearch(SearchEngine):
     _SYSTEM_ROLE_CONTENT = "You are a search system"
     _PRODUCT_SEARCH_TEMPLATE = (
         "Provide information about {product} without sourses links"
     )
     _COMMENT_TEXT_TEMPLATE = "Comment: {comment}"
 
-    def __init__(self, perplexity_model: str, ebay_config: EbayConfig) -> None:
+    def __init__(
+        self, perplexity_config: PerplexityConfig, ebay_config: EbayConfig
+    ) -> None:
         self._client = PerplexityClient()
-        self._perplexity_model = perplexity_model
+        self._perplexity_model = perplexity_config.model
         self._ebay_config = ebay_config
 
     @classmethod
