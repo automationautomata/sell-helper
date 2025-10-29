@@ -38,21 +38,21 @@ class JWTAuthABC(ABC):
 
 
 class JWTAuth(JWTAuthABC):
-    def __init__(self, jwt_expiration_minutes: int, jwt_algorithm: str):
-        self._jwt_expiration_minutes = jwt_expiration_minutes
+    def __init__(self, jwt_ttl_minutes: int, jwt_algorithm: str):
+        self._jwt_ttl_minutes = jwt_ttl_minutes
         self._jwt_algorithm = jwt_algorithm
 
-    def create_access_token(self, data: Any) -> JWTToken:
-        delta = timedelta(minutes=self._jwt_expiration_minutes)
+    def generate_token(self, data: Any) -> JWTToken:
+        delta = timedelta(minutes=self._jwt_ttl_minutes)
         expires_at = datetime.now(timezone.utc) + delta
 
-        payload = {"exp": expires_at, "data": TypeAdapter(type(data)).dump_python()}
+        payload = {"exp": expires_at, "data": TypeAdapter(type(data)).dump_python(data)}
         token = jwt.encode(
             payload, os.getenv(EnvKeys.JWT_SECRET), algorithm=self._jwt_algorithm
         )
         return JWTToken(token=token, expires_at=expires_at)
 
-    def validate(self, token: str, data_type: Type) -> Any:
+    def verify_token(self, token: str, data_type: Type) -> Any:
         try:
             payload = jwt.decode(token)
             return TypeAdapter(data_type).validate_python(payload["data"])

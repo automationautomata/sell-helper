@@ -20,7 +20,7 @@ class Token:
 
 class AuthServiceABC(ABC):
     @abstractmethod
-    def verify_user(self, email: str, password: str) -> bool:
+    async def verify_user(self, email: str, password: str) -> bool:
         pass
 
     @abstractmethod
@@ -28,7 +28,7 @@ class AuthServiceABC(ABC):
         pass
 
     @abstractmethod
-    def validate(token: str) -> Optional[User]:
+    async def validate(token: str) -> Optional[User]:
         pass
 
 
@@ -44,14 +44,12 @@ class AuthService(AuthServiceABC):
         self._user_repo = user_repo
         self._jwt_auth = jwt_auth
 
-    def verify_user(self, email: str, password: str) -> bool:
-        user = self._user_repo.get_user_by_email(email)
+    async def verify_user(self, email: str, password: str) -> bool:
+        user = await self._user_repo.get_user_by_email(email)
         if user is None:
             return False
 
-        check_password = self._hasher.verify(
-            user.password_hash, f"{password}{user.salt}"
-        )
+        check_password = self._hasher.verify(password, user.password_hash)
         return user.email == email and check_password
 
     def create_access_token(self, email: str) -> Token:
@@ -59,10 +57,10 @@ class AuthService(AuthServiceABC):
         jwt_token = self._jwt_auth.generate_token(payload)
         return Token(token=jwt_token.token, ttl_seconds=jwt_token.expires_at.second)
 
-    def validate(self, token: str) -> Optional[User]:
+    async def validate(self, token: str) -> Optional[User]:
         try:
             payload = self._jwt_auth.verify_token(token, AuthService.TokenPayload)
         except InvalidTokenError:
             return
 
-        return self._user_repo.get_user_by_email(payload.email)
+        return await self._user_repo.get_user_by_email(payload.email)

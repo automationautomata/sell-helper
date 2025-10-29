@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AsyncIterable, Dict, List, NamedTuple, Type
+from typing import AsyncIterable, List, NamedTuple, Type
 
 from api.dependencies import SellingServicesFactory, SerachServicesFactory
 from api.models.requests import MarketplaceAspects
@@ -23,13 +23,12 @@ from dishka import (
     from_context,
     provide,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
 @dataclass
 class JWTAuthSettings:
-    jwt_expiration_minutes: int
+    jwt_ttl_minutes: int
     jwt_algorithm: str
 
 
@@ -37,21 +36,21 @@ class AuthServiceProvider(Provider):
     hasher = from_context(IHasher, scope=Scope.APP)
     jwt_settings = from_context(JWTAuthSettings, scope=Scope.APP)
 
-    def __init__(self, session_local: sessionmaker, scope=None, component=None):
+    def __init__(self, session_maker: async_sessionmaker, scope=None, component=None):
         super().__init__(scope, component)
-        self.session_local = session_local
+        self._session_maker = session_maker
 
     @provide(scope=Scope.APP)
-    def jwt_auth(self, jwt_settings: JWTAuthSettings) -> JWTAuthABC:
-        return JWTAuth(
-            jwt_settings.jwt_expiration_minutes,
-            jwt_settings.jwt_algorithm,
-        )
+    async def session(self) -> AsyncIterable[AsyncSession]:
+        async with self._session_maker() as session:
+            yield session
 
     @provide(scope=Scope.REQUEST)
-    async def session(self) -> AsyncIterable[AsyncSession]:
-        async with self.session_local() as session:
-            yield session
+    def jwt_auth(self, jwt_settings: JWTAuthSettings) -> JWTAuthABC:
+        return JWTAuth(
+            jwt_settings.jwt_ttl_minutes,
+            jwt_settings.jwt_algorithm,
+        )
 
     @provide(scope=Scope.REQUEST)
     def user_repository(self, session: AsyncSession) -> UsersRepositoryABC:

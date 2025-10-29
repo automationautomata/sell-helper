@@ -48,7 +48,7 @@ def load_config():
         EnvKeys.PERPLEXITY_CONFIG_PATH, Pathes.PERPLEXITY_CONFIG
     )
     return Config(
-        db=DBConfig(connection_string=os.getenv(EnvKeys.DB)),
+        db=DBConfig(connection_string=os.getenv(EnvKeys.DB_URI)),
         perplexity=PerplexityConfig.model_validate(_load_yaml(perplexity_path)),
         ebay={
             k: EbayConfig.model_validate(v) for k, v in _load_yaml(ebay_path).items()
