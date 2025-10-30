@@ -1,7 +1,6 @@
 import logging
 from logging.config import dictConfig
 
-from colorlog import default_log_colors
 
 LOG_CONFIG = {
     "version": 1,
@@ -12,17 +11,11 @@ LOG_CONFIG = {
             "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
-        "colored": {
-            "()": "colorlog.ColoredFormatter",
-            "format": "%(cyan)s%(asctime)s%(reset)s %(log_color)s[%(levelname)s]%(reset)s %(blue)s%(name)s%(reset)s: %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-            "log_colors": default_log_colors,
-        },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "colored",
+            "formatter": "default",
             "stream": "ext://sys.stdout",
         },
     },
@@ -36,4 +29,5 @@ LOG_CONFIG = {
 
 
 dictConfig(LOG_CONFIG)
+
 logger = logging.getLogger("app")
