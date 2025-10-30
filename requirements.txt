@@ -1,0 +1,16 @@
+aiofiles==25.1.0
+aiohttp==3.11.18
+APScheduler==3.11.0
+colorlog==6.9.0
+dishka==1.7.2
+fastapi==0.120.2
+opencv_python==4.12.0.88
+passlib==1.7.4
+perplexity_api==1.0.5
+pydantic==2.12.3
+PyJWT==2.10.1
+PyJWT==2.10.1
+PyYAML==6.0.2
+PyYAML==6.0.3
+pyzbar==0.1.9
+SQLAlchemy==2.0.44
