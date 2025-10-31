@@ -27,6 +27,7 @@ class EbaySellingClient:
             headers={
                 "Authorization": f"Bearer {os.getenv(EnvKeys.EBAY_USER_TOKEN)}",
             },
+            json=item.model_dump(by_alias=True, exclude_unset=True)
         )
         response.raise_for_status()
 

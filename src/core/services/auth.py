@@ -55,7 +55,7 @@ class AuthService(AuthServiceABC):
     def create_access_token(self, email: str) -> Token:
         payload = AuthService.TokenPayload(email=email)
         jwt_token = self._jwt_auth.generate_token(payload)
-        return Token(token=jwt_token.token, ttl_seconds=jwt_token.expires_at.second)
+        return Token(token=jwt_token.token, ttl_seconds=int(jwt_token.expires_at.timestamp()))
 
     async def validate(self, token: str) -> Optional[User]:
         try:

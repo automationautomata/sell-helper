@@ -24,7 +24,7 @@ class verification:
             )
 
         try:
-            user = await auth_service.validate(request)
+            user = await auth_service.validate(auth_header.removeprefix("Bearer "))
         except Exception as e:
             logger.exception(f"Validation failed: {e}", exc_info=True)
 

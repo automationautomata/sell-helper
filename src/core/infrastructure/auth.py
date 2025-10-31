@@ -54,11 +54,15 @@ class JWTAuth(JWTAuthABC):
 
     def verify_token(self, token: str, data_type: Type) -> Any:
         try:
-            payload = jwt.decode(token)
+            payload = jwt.decode(
+                token,
+                os.getenv(EnvKeys.JWT_SECRET),
+                algorithms=[self._jwt_algorithm],
+            )
             return TypeAdapter(data_type).validate_python(payload["data"])
 
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-            raise InvalidTokenError()
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
+            raise InvalidTokenError() from e
 
         except ValidationError as e:
             raise InvalidPayloadTypeError() from e

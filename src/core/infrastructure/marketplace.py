@@ -1,5 +1,6 @@
 import uuid
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from config import EbayConfig
 from external.ebay import models as ebay_models
@@ -17,7 +18,7 @@ class MarketplaceAPIError(Exception):
     pass
 
 
-class CategoryNotExistsError(Exception):
+class CategoryNotExistsError(MarketplaceAPIError):
     pass
 
 
@@ -40,43 +41,8 @@ class MarketplaceAPI(ABC):
 
 
 class EbayAPI(MarketplaceAPI):
-    MARKETPLACES = (
-        ("australia", "EBAY_AU"),
-        ("austria", "EBAY_AT"),
-        ("belgium", "EBAY_BE"),
-        ("vanada", "EBAY_CA"),
-        ("france", "EBAY_FR"),
-        ("germany", "EBAY_DE"),
-        ("hong kong", "EBAY_HK"),
-        ("ireland", "EBAY_IE"),
-        ("italy", "EBAY_IT"),
-        ("malaysia", "EBAY_MY"),
-        ("motors us", "EBAY_MOTORS"),
-        ("netherlands", "EBAY_NL"),
-        ("philippines", "EBAY_PH"),
-        ("poland", "EBAY_PL"),
-        ("russia", "EBAY_RU"),
-        ("singapore", "EBAY_SG"),
-        ("spain", "EBAY_ES"),
-        ("switzerland", "EBAY_CH"),
-        ("uk", "EBAY_GB"),
-        ("us", "EBAY_US"),
-    )
-
     def __init__(self, config: EbayConfig):
         self._config = config
-
-        config_listing_policies = self._config.listing_policies
-
-        fulfillment_policy_id = config_listing_policies.fulfillment_policy_id
-        payment_policy_id = config_listing_policies.payment_policy_id
-        return_policy_id = config_listing_policies.return_policy_id
-
-        self._listing_policies = ebay_models.ListingPolicies(
-            fulfillmentPolicyId=fulfillment_policy_id,
-            paymentPolicyId=payment_policy_id,
-            returnPolicyId=return_policy_id,
-        )
 
         self._selling_api = EbaySellingClient(config.domain)
         self._taxonomy_api = EbayTaxonomyClient(config.domain)
@@ -84,15 +50,12 @@ class EbayAPI(MarketplaceAPI):
 
     def publish(self, item: EbayItem, *images: str):
         try:
-            images_urls = []
-            for img in images:
-                img_response = self._commerce_api.upload_image(img)
-                images_urls.append(img_response.image_url)
+            images_urls = self._load_images(*images)
         except CommerceClientError as e:
             raise MarketplaceAPIError() from e
 
-        sku = uuid.uuid4().hex.upper()[:50]
         try:
+            sku = uuid.uuid4().hex.upper()[:50]
             category_id, _ = self.get_category_id(item.category)
         except EbaySellingClientError as e:
             raise MarketplaceAPIError() from e
@@ -101,37 +64,60 @@ class EbayAPI(MarketplaceAPI):
         try:
             self._selling_api.create_or_replace_inventory_item(sku, inventory_item)
         except EbaySellingClientError as e:
-            try:
-                self._selling_api.delete_inventory_item(sku)
-            except EbaySellingClientError:
-                pass
+            self._publish_cleanup(sku)
+
             raise MarketplaceAPIError() from e
 
-        listing_policies = self._listing_policies
-        marketplace_id = self._config.marketplace_id
-        price = ebay_models.Price(currency=item.currency, value=item.price)
-
-        offer = ebay_models.Offer(
-            sku=sku,
-            format="FIXED_PRICE",
-            category_id=category_id,
-            marketplace_id=marketplace_id,
-            listing_policies=listing_policies,
-            pricing_summary=ebay_models.PricingSummary(price=price),
-        )
-
         try:
+            offer = self._make_offer(sku, category_id, item.currency, item.price)
             offer_id = self._selling_api.create_offer(offer)
 
             self._selling_api.publish_offer(offer_id)
         except EbaySellingClientError as e:
-            try:
-                self._selling_api.delete_inventory_item(sku)
-                self._selling_api.delete_offer(offer_id)
-            except EbaySellingClientError:
-                pass
+            self._publish_cleanup(sku, offer_id)
 
             raise MarketplaceAPIError() from e
+
+    def _load_images(self, *images: str):
+        images_urls = []
+        for img in images:
+            img_response = self._commerce_api.upload_image(img)
+            images_urls.append(img_response.image_url)
+        return images_urls
+
+    def _make_offer(self, sku: str, category_id: str, currency: str, price: float):
+        marketplace_id = self._config.marketplace_id
+        price = ebay_models.Price(currency=currency, value=price)
+
+        return ebay_models.Offer(
+            sku=sku,
+            format="FIXED_PRICE",
+            category_id=category_id,
+            marketplace_id=marketplace_id,
+            listing_policies=self._get_listing_policies(),
+            pricing_summary=ebay_models.PricingSummary(price=price),
+        )
+
+    def _get_listing_policies(self):
+        listing_policies = self._config.listing_policies
+
+        fulfillment_policy_id = listing_policies.fulfillment_policy_id
+        payment_policy_id = listing_policies.payment_policy_id
+        return_policy_id = listing_policies.return_policy_id
+
+        return ebay_models.ListingPolicies(
+            fulfillmentPolicyId=fulfillment_policy_id,
+            paymentPolicyId=payment_policy_id,
+            returnPolicyId=return_policy_id,
+        )
+
+    def _publish_cleanup(self, sku: str, offer_id: Optional[str] = None):
+        try:
+            self._selling_api.delete_inventory_item(sku)
+            if offer_id:
+                self._selling_api.delete_offer(offer_id)
+        except EbaySellingClientError:
+            pass
 
     def get_category_id(self, category_name: str) -> tuple[str, str]:
         try:
