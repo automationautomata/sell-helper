@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from ..core.services.auth import AuthServiceABC
 from ..logger import logger
+from .models.responses import ErrorResponse
 
 
 class authentication:
@@ -20,7 +21,7 @@ class authentication:
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             return JSONResponse(
-                content={"error": "Authorization header missing or invalid"},
+                content=ErrorResponse(error="Authorization header missing or invalid"),
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -30,13 +31,13 @@ class authentication:
             logger.exception(f"Validation failed: {e}", exc_info=True)
 
             return JSONResponse(
-                content={"error": "Validation failed"},
+                content=ErrorResponse(error="Validation failed"),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         if user is None:
             return JSONResponse(
-                content={"error": "Authorization header missing or invalid"},
+                content=ErrorResponse("Authorization header missing or invalid"),
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
         return await call_next(request)

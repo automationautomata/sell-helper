@@ -41,7 +41,6 @@ class EbaySellingClient:
             json={"offerId": sku},
         )
         response.raise_for_status()
-        return response.json()
 
     @utils.request_exception_chain(default=EbaySellingClientError)
     def create_offer(self, item: models.Offer, lang: str = "en-US") -> int:
@@ -68,7 +67,6 @@ class EbaySellingClient:
             },
         )
         response.raise_for_status()
-        return response.json()
 
     @utils.request_exception_chain(default=EbaySellingClientError)
     def delete_offer(self, offer_id: int):
@@ -79,4 +77,3 @@ class EbaySellingClient:
             },
         )
         response.raise_for_status()
-        return response.json()

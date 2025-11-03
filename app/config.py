@@ -18,6 +18,7 @@ class EbayConfig(BaseModel):
     redirecturi: str
     listing_policies: ListingPoliciesConfig
     marketplace_id: str
+    location_key: str
 
 
 class PerplexityConfig(BaseModel):
