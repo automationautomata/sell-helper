@@ -29,7 +29,7 @@ class InvalidValue(MarketplaceAPIError):
 
 class MarketplaceAPI(ABC):
     @abstractmethod
-    def publish(self, product: Item, *images: str):
+    def publish(self, product: Item, *images: str) -> None:
         pass
 
     @abstractmethod
@@ -104,6 +104,7 @@ class EbayAPI(MarketplaceAPI):
             marketplace_id=marketplace_id,
             listing_policies=self._get_listing_policies(),
             pricing_summary=ebay_models.PricingSummary(price=price),
+            location_key=self._config.location_key,
         )
 
     def _get_listing_policies(self):
@@ -166,37 +167,39 @@ class EbayAPI(MarketplaceAPI):
     def _from_ebay_aspects(
         cls, ebay_aspects: ebay_models.AspectMetadata
     ) -> list[AspectType]:
-        type_mapping = {
-            ebay_models.AspectDataTypeEnum.STRING: AspectType.STR,
-            ebay_models.AspectDataTypeEnum.STRING_ARRAY: AspectType.STR,
-            ebay_models.AspectDataTypeEnum.NUMBER: AspectType.FLOAT,
-        }
+        def type_mapping(constraint):
+            cardinality = constraint.item_to_aspect_cardinality
+            if cardinality == ebay_models.ItemToAspectCardinalityEnum.MULTI:
+                return AspectType.LIST
+
+            mapping = {
+                ebay_models.AspectDataTypeEnum.STRING: AspectType.STR,
+                ebay_models.AspectDataTypeEnum.STRING_ARRAY: AspectType.STR,
+                ebay_models.AspectDataTypeEnum.NUMBER: AspectType.FLOAT,
+            }
+            return mapping.get(constraint.aspect_data_type, AspectType.STR)
+
         RECOMMENDED = ebay_models.AspectUsageEnum.RECOMMENDED
         SELECTION_ONLY = ebay_models.AspectModeEnum.SELECTION_ONLY
 
         aspects = []
         for aspect in ebay_aspects.aspects:
             constraint = aspect.aspect_constraint
-
-            is_recomended_mode = constraint.aspect_mode == RECOMMENDED
-            is_req = constraint.aspect_required
-
-            cardinality = constraint.item_to_aspect_cardinality
-            if cardinality == ebay_models.ItemToAspectCardinalityEnum.MULTI:
-                _type = AspectType.LIST
-            else:
-                _type = type_mapping.get(constraint.aspect_data_type, AspectType.STR)
+            is_required = constraint.aspect_required
+            is_recomended_mode = constraint.aspect_usage == RECOMMENDED
 
             allowed_values = set()
             if constraint.aspect_mode == SELECTION_ONLY:
                 allowed_values.update(v.localized_value for v in aspect.aspect_values)
 
             name = aspect.localized_aspect_name
+            data_type = type_mapping(constraint)
+
             aspects.append(
                 AspectField(
                     name=name,
-                    data_type=_type,
-                    is_required=is_recomended_mode or is_req,
+                    data_type=data_type,
+                    is_required=is_recomended_mode or is_required,
                     allowed_values=frozenset(allowed_values),
                 )
             )
@@ -259,6 +262,7 @@ class EbayAPI(MarketplaceAPI):
         )
 
         marketplace_aspects = item.marketplace_aspects
+
         package = None
         if is_shipping:
             package = ebay_models.PackageWeightAndSize(
@@ -268,7 +272,7 @@ class EbayAPI(MarketplaceAPI):
         condition = marketplace_aspects.condition
         condition_description = marketplace_aspects.condition_description
         try:
-            inventory_item = ebay_models.InventoryItem(
+            return ebay_models.InventoryItem(
                 availability=availability,
                 condition=condition,
                 product=ebay_product,
@@ -277,5 +281,3 @@ class EbayAPI(MarketplaceAPI):
             )
         except ValidationError as e:
             raise MarketplaceAPIError() from e
-
-        return inventory_item

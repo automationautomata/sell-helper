@@ -25,7 +25,7 @@ from ..utils import utils
 from .dependencies import SellingServicesFactory
 from .models.common import Marketplace
 from .models.requests import SellItemRequest
-from .models.responses import ErrorResponse, ItemResponse
+from .models.responses import ErrorResponse, PublishItemResponse
 
 PREFIX = "/selling"
 
@@ -33,7 +33,7 @@ router = APIRouter(route_class=DishkaRoute, prefix=PREFIX)
 
 
 @router.post(
-    "/{marketplace}/publish", response_model=Union[ItemResponse, ErrorResponse]
+    "/{marketplace}/publish", response_model=Union[PublishItemResponse, ErrorResponse]
 )
 async def publish_item(
     response: Response,
@@ -64,7 +64,7 @@ async def publish_item(
             data = item.model_dump()
             marketplace_aspects_data = data.pop("marketplace_aspects")
             product_data = data.pop("product")
-            published_item = seller.sell_item(
+            seller.sell_item(
                 ItemData(**data), marketplace_aspects_data, product_data, *images_pathes
             )
         except SellingError as e:
@@ -77,4 +77,4 @@ async def publish_item(
             response.status_code = status.HTTP_400_BAD_REQUEST
             return ErrorResponse(error=f"Invalid category: {item.category}")
 
-        return ItemResponse.from_domain(published_item)
+        return PublishItemResponse(status="success")

@@ -42,7 +42,7 @@ class SellingServiceABC(ABC):
         marketplace_aspects_data: Dict[str, Any],
         product_data: list[AspectData],
         *images: str,
-    ) -> Item:
+    ) -> None:
         pass
 
 
@@ -73,7 +73,7 @@ class SellingService(SellingServiceABC):
             product=product,
         )
         try:
-            return self._marketplace_api.publish(item, *images)
+            self._marketplace_api.publish(item, *images)
 
         except MarketplaceAPIError as e:
             raise SellingError() from e
