@@ -2,7 +2,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from ..domain.question import Answer, ProductStructure, Question, TMetadata
-from ..infrastructure.adapter import InvalidProduct, QuestionAdapterABC, ValidationError
+from ..infrastructure.adapter import (
+    InvalidMetadata,
+    InvalidProduct,
+    QuestionAdapterABC,
+    ValidationError,
+)
 from ..infrastructure.marketplace import MarketplaceAPI
 from ..infrastructure.search import (
     CategoriesNotFoundError,
@@ -71,6 +76,9 @@ class SearchService(SearchServiceABC):
 
         except InvalidProduct as e:
             raise SearchError("Failed to parse product aspects data") from e
+
+        except InvalidMetadata as e:
+            raise SearchError("Failed to parse product metadata") from e
 
         except ValidationError as e:
             raise SearchError("Failed to parse product metadata") from e

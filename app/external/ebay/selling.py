@@ -6,11 +6,12 @@ from ...config import EbayDomain
 from ...data import EnvKeys
 from ...utils import utils
 from . import models
+from .errors import EbayRequestError
 
 API_ENDPOINT = "/sell/inventory/v1"
 
 
-class EbaySellingClientError(Exception):
+class EbaySellingClientError(EbayRequestError):
     pass
 
 

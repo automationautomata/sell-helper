@@ -1,9 +1,15 @@
-from typing import Callable
+from typing import Protocol
 
 from ..core.services.search import SearchServiceABC
 from ..core.services.selling import SellingServiceABC
 from .models.common import Marketplace
 
-SearchServicesFactory = Callable[[Marketplace], SearchServiceABC]
 
-SellingServicesFactory = Callable[[Marketplace], SellingServiceABC]
+class ISearchServicesFactory(Protocol):
+    def get(self, marketplace: Marketplace) -> SearchServiceABC:
+        pass
+
+
+class ISellingServicesFactory(Protocol):
+    def get(self, marketplace: Marketplace) -> SellingServiceABC:
+        pass

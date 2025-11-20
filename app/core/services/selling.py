@@ -84,10 +84,10 @@ class SellingService(SellingServiceABC):
         try:
             fields = self._marketplace_api.get_product_aspects(category_name)
 
-        except MarketplaceAPIError as e:
-            raise SellingError() from e
         except CategoryNotExistsError as e:
             raise CategoryNotFound() from e
+        except MarketplaceAPIError as e:
+            raise SellingError() from e
 
         try:
             product_structure = ProductStructure(fields=fields)

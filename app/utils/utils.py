@@ -45,9 +45,11 @@ def generate_file_name(filepath: str) -> str:
     return os.path.join(path, f"{name}{ext}")
 
 
+
+
 def request_exception_chain(
+    default: Type[Exception] = RuntimeError,
     *,
-    default: Optional[Type[Exception]] = RuntimeError,
     on_request: Optional[Type[Exception]] = None,
     on_connection: Optional[Type[Exception]] = None,
     on_timeout: Optional[Type[Exception]] = None,
@@ -64,12 +66,13 @@ def request_exception_chain(
     def wrapped(func: Callable):
         def inner(*args, **kwargs):
             try:
-                res = func(*args, **kwargs)
+                return func(*args, **kwargs)
             except exceptions as e:
-                ex_type = exceptions_map.get(type[e], default)
+                ex_type = exceptions_map.get(type(e))
+                if ex_type is None:
+                    ex_type = default
+
                 raise ex_type() from e
-            else:
-                return res
 
         return inner
 
