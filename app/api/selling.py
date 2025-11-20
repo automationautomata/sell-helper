@@ -22,7 +22,7 @@ from ..core.services.selling import (
 )
 from ..logger import logger
 from ..utils import utils
-from .dependencies import SellingServicesFactory
+from .dependencies import ISellingServicesFactory
 from .models.common import Marketplace
 from .models.requests import SellItemRequest
 from .models.responses import ErrorResponse, PublishItemResponse
@@ -37,12 +37,12 @@ router = APIRouter(route_class=DishkaRoute, prefix=PREFIX)
 )
 async def publish_item(
     response: Response,
-    selling_factory: FromDishka[SellingServicesFactory],
+    selling_factory: FromDishka[ISellingServicesFactory],
     item: SellItemRequest = Body(...),
     images: List[UploadFile] = File(...),
     marketplace: Marketplace = Path(...),
 ):
-    seller = selling_factory(marketplace)
+    seller = selling_factory.get(marketplace)
     with tempfile.TemporaryDirectory(prefix="selling_images_") as tmpdir:
         try:
             images_pathes = []

@@ -104,7 +104,7 @@ class EbayAPI(MarketplaceAPI):
             marketplace_id=marketplace_id,
             listing_policies=self._get_listing_policies(),
             pricing_summary=ebay_models.PricingSummary(price=price),
-            location_key=self._config.location_key,
+            merchant_location_key=self._config.location_key,
         )
 
     def _get_listing_policies(self):

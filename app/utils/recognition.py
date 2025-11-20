@@ -4,7 +4,7 @@ from pyzbar import pyzbar
 
 def extract_barcodes(img_path: str) -> list[str]:
     """
-    Extract barcodes from an image file.
+    Extract barcodes from an image.
 
     Args:
         img_path (str): Path to the image file containing barcodes

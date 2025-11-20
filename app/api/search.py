@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Path, Response, UploadFile, status
 from ..core.services.search import SearchError
 from ..logger import logger
 from ..utils import utils
-from .dependencies import SearchServicesFactory
+from .dependencies import ISearchServicesFactory
 from .models.common import Marketplace
 from .models.requests import ProductRequest
 from .models.responses import ErrorResponse, ProductCategoriesResponse, ProductResponse
@@ -25,10 +25,10 @@ router = APIRouter(route_class=DishkaRoute, prefix=PREFIX)
 async def search_by_product_name(
     product: ProductRequest,
     response: Response,
-    search_factory: FromDishka[SearchServicesFactory],
+    search_factory: FromDishka[ISearchServicesFactory],
     marketplace: Marketplace = Path(...),
 ):
-    searcher = search_factory(marketplace)
+    searcher = search_factory.get(marketplace)
     try:
         answer = searcher.product(
             product.product_name, product.category, product.comment
@@ -48,11 +48,11 @@ async def search_by_product_name(
 )
 async def search_product_categories(
     response: Response,
-    search_factory: FromDishka[SearchServicesFactory],
+    search_factory: FromDishka[ISearchServicesFactory],
     image: UploadFile = File(...),
     marketplace: Marketplace = Path(...),
 ):
-    searcher = search_factory(marketplace)
+    searcher = search_factory.get(marketplace)
     with tempfile.TemporaryDirectory(prefix="search_by_image_") as temp_dir:
         try:
             temp_path = os.path.join(

@@ -1,12 +1,12 @@
 import base64
 import os
-from typing import Optional
 
 import aiohttp
 
 from ...config import EbayConfig
 from ...data import EnvKeys
 from . import models
+from .errors import EbayRequestError
 
 API_ENDPOINT = "/identity/v1/oauth2/token"
 
@@ -17,17 +17,8 @@ SCOPES = (
 )
 
 
-class EbayAuthError(Exception):
-    def __init__(self, response_body: Optional[dict] = None, *args):
-        super().__init__(*args)
-        self.response_body = response_body
-
-    def __str__(self):
-        msg = f"cause: {self.__cause__}"
-        if self.response_body:
-            msg = f"body: {self.response_body}, {msg}"
-
-        return f"EbayAuthError: {msg}"
+class EbayAuthError(EbayRequestError):
+    pass
 
 
 class EbayAuthClient:

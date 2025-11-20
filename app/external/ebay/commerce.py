@@ -2,6 +2,8 @@ import os
 
 import requests
 
+from ..ebay.errors import EbayRequestError
+
 from ...config import EbayDomain
 from ...data import EnvKeys
 from ...utils import utils
@@ -10,8 +12,11 @@ from .models import ImageResponse
 API_ENDPOINT = "/commerce/media/v1_beta"
 
 
-class CommerceClientError(Exception):
-    pass
+class CommerceClientError(EbayRequestError):
+    def __init__(self) -> None:
+        cause = self.__cause__
+        if isinstance(cause, requests.HTTPError):
+            self.response_content = cause.response.text
 
 
 class EbayCommerceClient:

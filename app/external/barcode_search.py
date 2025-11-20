@@ -1,8 +1,8 @@
 import os
-import requests
 
-from ..utils import utils
-from ..data import EnvKeys
+import requests
+from app.data import EnvKeys
+from app.utils import utils
 
 
 class BarcodeSearchError(Exception):

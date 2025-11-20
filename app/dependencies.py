@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import AsyncIterable, List, NamedTuple, Type
+from typing import AsyncIterable, Dict, Type
 
+from app.api.models.common import Marketplace
 from dishka import (
     FromComponent,
     Provider,
@@ -12,7 +13,7 @@ from dishka import (
 from perplexity import Perplexity as PerplexityClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from .api.dependencies import SellingServicesFactory, SearchServicesFactory
+from .api.dependencies import ISearchServicesFactory, ISellingServicesFactory
 from .api.models.requests import MarketplaceAspects
 from .config import EbayConfig, PerplexityConfig
 from .core.domain.ebay.item import EbayMarketplaceAspects
@@ -126,19 +127,27 @@ class EbayProvider(Provider):
         return SellingService(marketplace_api, marketplace_aspects_type)
 
 
-class MarketplaceComponentPair(NamedTuple):
-    marketplace: str
-    component: str
+class SellingServicesFactory:
+    def __init__(self, mapping: Dict[Marketplace, SellingServiceABC]):
+        self._mapping = mapping
+
+    def get(self, marketplace: str) -> SearchServiceABC:
+        if marketplace not in self._mapping:
+            raise ValueError(f"Invalid marketplace name {marketplace}")
+        return self._mapping[marketplace]
 
 
-@dataclass
-class MarketplaceComponentMap:
-    mapping: List[MarketplaceComponentPair]
+class SearchServicesFactory:
+    def __init__(self, mapping: Dict[Marketplace, SearchServiceABC]):
+        self._mapping = mapping
+
+    def get(self, marketplace: str) -> SellingServiceABC:
+        if marketplace not in self._mapping:
+            raise ValueError(f"Invalid marketplace name {marketplace}")
+        return self._mapping[marketplace]
 
 
 class ServicesFactoriesProvider(Provider):
-    marketplace_map = from_context(MarketplaceComponentMap, scope=Scope.APP)
-
     ebay_search = alias(
         source=SearchServiceABC, provides=SearchServiceABC, component="ebay"
     )
@@ -148,33 +157,13 @@ class ServicesFactoriesProvider(Provider):
     )
 
     @provide(scope=Scope.REQUEST)
-    def selling_service(
-        self,
-        marketplace_map: MarketplaceComponentMap,
-        ebay_selling: SellingServiceABC = FromComponent("ebay"),
-    ) -> SellingServicesFactory:
-        def wrapper(mapping):
-            def factory(marketplace: str):
-                if mapping.get(marketplace, "") == "ebay":
-                    return ebay_selling
-                raise ValueError(f"Invalid marketplace name {marketplace}")
-
-            return factory
-
-        return wrapper(dict(marketplace_map.mapping))
+    def selling_services_factory(
+        self, ebay_selling: SellingServiceABC = FromComponent("ebay")
+    ) -> ISellingServicesFactory:
+        return SellingServicesFactory({Marketplace.EBAY: ebay_selling})
 
     @provide(scope=Scope.REQUEST)
-    def search_service(
-        self,
-        marketplace_map: MarketplaceComponentMap,
-        ebay_search: SearchServiceABC = FromComponent("ebay"),
-    ) -> SearchServicesFactory:
-        def wrapper(mapping):
-            def factory(marketplace: str):
-                if mapping.get(marketplace, "") == "ebay":
-                    return ebay_search
-                raise ValueError(f"Invalid marketplace name {marketplace}")
-
-            return factory
-
-        return wrapper(dict(marketplace_map.mapping))
+    def search_services_factory(
+        self, ebay_search: SearchServiceABC = FromComponent("ebay")
+    ) -> ISearchServicesFactory:
+        return SellingServicesFactory({Marketplace.EBAY: ebay_search})

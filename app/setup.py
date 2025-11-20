@@ -89,15 +89,11 @@ def container(session: sessionmaker, ebay: EbayConfig, perplexity: PerplexityCon
         FastapiProvider(),
     ]
 
-    mapping = dep.MarketplaceComponentMap(
-        mapping=[dep.MarketplaceComponentPair("ebay", "ebay")]
-    )
     context = {
         EbayConfig: ebay,
         PerplexityConfig: perplexity,
         dep.JWTAuthSettings: dep.JWTAuthSettings(20, "HS256"),
         IHasher: pbkdf2_sha256,
-        dep.MarketplaceComponentMap: mapping,
     }
 
     return make_async_container(*providers, context=context)

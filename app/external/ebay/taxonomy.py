@@ -6,6 +6,7 @@ import requests
 from ...config import EbayDomain
 from ...data import EnvKeys
 from ...utils import utils
+from .errors import EbayRequestError
 from .models import (
     AspectMetadata,
     CategorySuggestionResponse,
@@ -16,11 +17,11 @@ from .models import (
 API_ENDPOINT = "/commerce/taxonomy/v1"
 
 
-class EbayTaxonomyClientError(Exception):
+class EbayTaxonomyClientError(EbayRequestError):
     pass
 
 
-class EbayCategoriesNotFoundError(Exception):
+class EbayCategoriesNotFoundError(EbayRequestError):
     pass
 
 
