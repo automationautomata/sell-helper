@@ -1,4 +1,5 @@
 import pytest
+
 from app.core.domain.question import Answer
 from app.core.infrastructure.adapter import (
     InvalidMetadata,
@@ -32,6 +33,7 @@ def service_with_mocks(mocker):
 
 
 # -------------------- TEST: product() -------------------- #
+
 
 def test_product_success(service_with_mocks):
     service, search, marketplace_api, adapter = service_with_mocks
@@ -90,6 +92,7 @@ def test_product_invalid_metadata_error(service_with_mocks):
 
 
 # -------------------- TEST: product_categories() -------------------- #
+
 
 def test_product_categories_success(service_with_mocks):
     service, search, _, _ = service_with_mocks

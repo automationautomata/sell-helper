@@ -20,6 +20,7 @@ from app.core.domain.value_objects import AspectField, AspectType
 
 class FakeMarketplaceAspects(BaseModel):
     """Mock marketplace aspects for testing."""
+
     marketplace: str
     condition: str
 
@@ -89,6 +90,7 @@ def valid_product_data():
 
 
 # -------------------- TEST: sell_item -------------------- #
+
 
 def test_sell_item_success(
     selling_service,
@@ -169,6 +171,7 @@ def test_sell_item_invalid_marketplace_aspects(
 
 
 # -------------------- TEST: _validate_product_structure -------------------- #
+
 
 def test_validate_product_structure_success(
     selling_service,
@@ -273,6 +276,7 @@ def test_validate_product_structure_incorrect_type(
 
 # -------------------- TEST: sell_item with different aspect types -------------------- #
 
+
 def test_sell_item_with_numeric_aspect(
     selling_service,
     mock_marketplace_api,
@@ -331,6 +335,7 @@ def test_sell_item_with_list_aspect(
 
 # -------------------- TEST: sell_item with multiple images -------------------- #
 
+
 def test_sell_item_with_no_images(
     selling_service,
     mock_marketplace_api,
@@ -378,6 +383,7 @@ def test_sell_item_with_single_image(
 
 
 # -------------------- TEST: SellingServiceABC interface -------------------- #
+
 
 def test_selling_service_implements_interface():
     """Test that SellingService implements SellingServiceABC."""

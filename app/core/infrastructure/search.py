@@ -107,7 +107,7 @@ class PerplexityAndEbaySearch(SearchEngine):
     @classmethod
     def _product_search_text(cls, product: str, comment: str) -> str:
         template = cls._PRODUCT_SEARCH_TEMPLATE
-        mapping = dict(product=product)
+        mapping = {"product": product}
 
         if comment:
             mapping.update(comment=comment)
@@ -135,7 +135,7 @@ class PerplexityAndEbaySearch(SearchEngine):
         self,
         text: str,
         response_format: Optional[Dict | str] = None,
-        response_type: Literal["json_schema", "regex"] = None,
+        response_type: Optional[Literal["json_schema", "regex"]] = None,
     ) -> str:
         messages = self._convert(text)
 

@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Dict
+from typing import Literal
 
 import yaml
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -9,9 +9,8 @@ from dishka.integrations.fastapi import FastapiProvider
 from fastapi import APIRouter
 from fastapi.concurrency import asynccontextmanager
 from passlib.hash import pbkdf2_sha256
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from typing_extensions import Literal
 
 from . import dependencies as dep
 from .api.auth import router as auth_router
@@ -23,7 +22,7 @@ from .data import EnvKeys, Pathes
 from .utils import utils
 
 
-def _load_yaml(path: str) -> Dict:
+def _load_yaml(path: str) -> dict:
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -44,14 +43,15 @@ def load_config(ebay_mode: Literal["sandbox", "production"]) -> Config:
     )
 
 
-def db_session(db: DBConfig) -> async_sessionmaker:
+def db_session(db: DBConfig) -> sessionmaker:
     engine = create_async_engine(db.connection_string)
 
-    session_maker = async_sessionmaker(
+    session_maker = sessionmaker(
         autocommit=False,
         autoflush=False,
         bind=engine,
         expire_on_commit=False,
+        class_=AsyncSession
     )
     return session_maker
 

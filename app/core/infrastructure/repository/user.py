@@ -14,7 +14,7 @@ class UsersRepositoryABC(ABC):
         pass
 
 
-class UsersRepository(ABC):
+class UsersRepository(UsersRepositoryABC):
     def __init__(self, db: AsyncSession):
         self.db = db
 

@@ -11,7 +11,7 @@ from dishka import (
     provide,
 )
 from perplexity import Perplexity as PerplexityClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .api.dependencies import ISearchServicesFactory, ISellingServicesFactory
 from .api.models.requests import MarketplaceAspects
@@ -43,13 +43,13 @@ class AuthServiceProvider(Provider):
     hasher = from_context(IHasher, scope=Scope.APP)
     jwt_settings = from_context(JWTAuthSettings, scope=Scope.APP)
 
-    def __init__(self, session_maker: async_sessionmaker, scope=None, component=None):
+    def __init__(self, async_session_factory: AsyncSession, scope=None, component=None):
         super().__init__(scope, component)
-        self._session_maker = session_maker
+        self._async_session_factory = async_session_factory
 
     @provide(scope=Scope.APP)
     async def session(self) -> AsyncIterable[AsyncSession]:
-        async with self._session_maker() as session:
+        async with self._async_session_factory() as session:
             yield session
 
     @provide(scope=Scope.REQUEST)

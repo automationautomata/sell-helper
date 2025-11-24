@@ -45,8 +45,6 @@ def generate_file_name(filepath: str) -> str:
     return os.path.join(path, f"{name}{ext}")
 
 
-
-
 def request_exception_chain(
     default: Type[Exception] = RuntimeError,
     *,
