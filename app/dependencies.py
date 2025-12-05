@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import AsyncIterable, Dict, Type
 
-from app.api.models.common import Marketplace
 from dishka import (
     FromComponent,
     Provider,
@@ -13,7 +12,12 @@ from dishka import (
 from perplexity import Perplexity as PerplexityClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .api.dependencies import ISearchServicesFactory, ISellingServicesFactory
+from .api.dependencies import (
+    IPriceStatisticsServicesFactory,
+    ISearchServicesFactory,
+    ISellingServicesFactory,
+)
+from .api.models.common import Marketplace
 from .api.models.requests import MarketplaceAspects
 from .config import EbayConfig, PerplexityConfig
 from .core.domain.ebay.item import EbayMarketplaceAspects
@@ -21,13 +25,22 @@ from .core.domain.ebay.question import EbayMetadata
 from .core.domain.question import Metadata
 from .core.infrastructure.adapter import QuestionAdapter, QuestionAdapterABC
 from .core.infrastructure.auth import JWTAuth, JWTAuthABC
+from .core.infrastructure.currency import CurrencyConverter
+from .core.infrastructure.ebay_items_fetch import FetchEbayItems, FetchEbayItemsABC
 from .core.infrastructure.hasher import IHasher
 from .core.infrastructure.marketplace import EbayAPI, EbayClients, MarketplaceAPI
 from .core.infrastructure.repository.user import UsersRepository, UsersRepositoryABC
 from .core.infrastructure.search import PerplexityAndEbaySearch, SearchEngine
 from .core.services.auth import AuthService, AuthServiceABC
+from .core.services.price_statistics.ebay_strategy import EbayPricesSearchStrategy
+from .core.services.price_statistics.price_statistics import (
+    IPricesSearchStrategy,
+    PriceStatisticsService,
+    PriceStatisticsServiceABC,
+)
 from .core.services.search import SearchService, SearchServiceABC
 from .core.services.selling import SellingService, SellingServiceABC
+from .external.ebay.browse import EbayBrowseClient
 from .external.ebay.commerce import EbayCommerceClient
 from .external.ebay.selling import EbaySellingClient
 from .external.ebay.taxonomy import EbayTaxonomyClient
@@ -106,6 +119,23 @@ class EbayProvider(Provider):
         )
         return EbayAPI(ebay_config, clients)
 
+    @provide(scope=Scope.APP)
+    def prices_search_strategy(self, ebay_config: EbayConfig) -> IPricesSearchStrategy:
+        taxonomy_client = EbayTaxonomyClient(ebay_config.domain)
+        browse_client = EbayBrowseClient(ebay_config.domain)
+        fetch_items = FetchEbayItems(
+            taxonomy_client, browse_client, ebay_config.marketplace_id
+        )
+        return EbayPricesSearchStrategy(fetch_items)
+
+    @provide(scope=Scope.REQUEST)
+    def statistics_service(
+        self,
+        strategy: IPricesSearchStrategy,
+    ) -> PriceStatisticsServiceABC:
+        converter = CurrencyConverter()
+        return PriceStatisticsService(strategy, converter)
+
     @provide(scope=Scope.REQUEST)
     def search_service(
         self,
@@ -127,11 +157,21 @@ class EbayProvider(Provider):
         return SellingService(marketplace_api, marketplace_aspects_type)
 
 
+class PriceStatisticsServicesFactory:
+    def __init__(self, mapping: Dict[Marketplace, PriceStatisticsService]):
+        self._mapping = mapping
+
+    def get(self, marketplace: Marketplace) -> PriceStatisticsServiceABC:
+        if marketplace not in self._mapping:
+            raise ValueError(f"Invalid marketplace name {marketplace}")
+        return self._mapping[marketplace]
+
+
 class SellingServicesFactory:
     def __init__(self, mapping: Dict[Marketplace, SellingServiceABC]):
         self._mapping = mapping
 
-    def get(self, marketplace: str) -> SearchServiceABC:
+    def get(self, marketplace: Marketplace) -> SearchServiceABC:
         if marketplace not in self._mapping:
             raise ValueError(f"Invalid marketplace name {marketplace}")
         return self._mapping[marketplace]
@@ -141,7 +181,7 @@ class SearchServicesFactory:
     def __init__(self, mapping: Dict[Marketplace, SearchServiceABC]):
         self._mapping = mapping
 
-    def get(self, marketplace: str) -> SellingServiceABC:
+    def get(self, marketplace: Marketplace) -> SellingServiceABC:
         if marketplace not in self._mapping:
             raise ValueError(f"Invalid marketplace name {marketplace}")
         return self._mapping[marketplace]
@@ -155,6 +195,16 @@ class ServicesFactoriesProvider(Provider):
     ebay_selling = alias(
         SellingServiceABC, provides=SellingServiceABC, component="ebay"
     )
+    
+    ebay_statistics = alias(
+        PriceStatisticsServiceABC, provides=PriceStatisticsServiceABC, component="ebay"
+    )
+
+    @provide(scope=Scope.REQUEST)
+    def statistics_services_factory(
+        self, ebay_statistics: PriceStatisticsServiceABC = FromComponent("ebay")
+    ) -> IPriceStatisticsServicesFactory:
+        return PriceStatisticsServicesFactory({Marketplace.EBAY: ebay_statistics})
 
     @provide(scope=Scope.REQUEST)
     def selling_services_factory(

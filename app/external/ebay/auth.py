@@ -1,5 +1,6 @@
 import base64
 import os
+from typing import Optional
 
 import aiohttp
 
@@ -24,10 +25,10 @@ class EbayAuthError(EbayRequestError):
 class EbayAuthClient:
     def __init__(self, config: EbayConfig):
         self._config = config
-        self._url_base = f"https://{self._config.domain}"
+        self.url_base = f"https://{self._config.domain}"
 
-    async def get_token(self) -> models.RefreshTokenResponse:
-        url = f"{self._url_base}{API_ENDPOINT}"
+    async def get_token(self) -> Optional[models.RefreshTokenResponse]:
+        url = f"{self.url_base}{API_ENDPOINT}"
 
         auth_str = f"{self._config.appid}:{self._config.certid}"
         headers = {
@@ -43,14 +44,11 @@ class EbayAuthClient:
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(url, data=payload, headers=headers) as resp:
-                    data = None
-                    if resp.content.total_bytes != 0:
-                        data = await resp.json()
                     resp.raise_for_status()
-                return models.RefreshTokenResponse.model_validate(data)
+                    if resp.content.total_bytes == 0:
+                        return
+                    data = await resp.json()
+                    return models.RefreshTokenResponse.model_validate(data)
 
-            except aiohttp.ClientResponseError as e:
-                raise EbayAuthError(data) from e
-
-            except aiohttp.ClientConnectionError as e:
+            except (aiohttp.ClientResponseError, aiohttp.ClientConnectionError) as e:
                 raise EbayAuthError() from e

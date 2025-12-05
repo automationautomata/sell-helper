@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Literal, Optional, TypedDict, Union
 
 from pydantic import BaseModel, model_validator
 
@@ -59,3 +59,14 @@ class SellItemRequest(BaseModel):
         if isinstance(value, (str, bytes, bytearray)):
             return json.loads(value)
         return value
+
+
+class EbayStatisticsFilters(TypedDict):
+    condition: Literal["NEW", "USED"]
+
+
+class StatisticsRequest(BaseModel):
+    name: str
+    category: str
+    currency: str
+    filters: Optional[EbayStatisticsFilters] = None

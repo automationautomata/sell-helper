@@ -23,7 +23,7 @@ class CategoryNotExistsError(MarketplaceAPIError):
     pass
 
 
-class InvalidValue(MarketplaceAPIError):
+class InvalidValueError(MarketplaceAPIError):
     pass
 
 
@@ -34,6 +34,10 @@ class MarketplaceAPI(ABC):
 
     @abstractmethod
     def get_category_id(self, category_name: str) -> str:
+        pass
+
+    @abstractmethod
+    def get_product_aspects(self, category_name: str) -> list[AspectField]:
         pass
 
     @abstractmethod
@@ -86,6 +90,65 @@ class EbayAPI(MarketplaceAPI):
 
             raise MarketplaceAPIError() from e
 
+    def get_category_id(self, category_name: str) -> tuple[str, str]:
+        try:
+            _, tree = self._get_category_tree()
+        except EbayTaxonomyClientError as e:
+            raise MarketplaceAPIError from e
+
+        res = self._search_category(tree, category_name)
+        if res is None:
+            raise CategoryNotExistsError(f"Category '{category_name}' not found")
+
+        id, name = res
+        return id, name
+
+    def _get_category_tree(self) -> tuple[str, ebay_models.CategoryTree]:
+        """Return (tree_id, tree) using taxonomy client."""
+        tree_id = self._taxonomy_api.get_default_tree_id(self._config.marketplace_id)
+        tree = self._taxonomy_api.fetch_category_tree(tree_id)
+        return tree_id, tree
+
+    @staticmethod
+    def _search_category(
+        tree: ebay_models.CategoryTree, target: str
+    ) -> tuple[str, str] | None:
+        """Recursively search category tree for a matching category name (case-insensitive)."""
+
+        def search(node: ebay_models.CategoryTreeNode) -> tuple[str, str] | None:
+            # check leaf node names first
+            if node.leaf_category_tree_node:
+                category = node.category
+                name = category.category_name
+                if name and target.lower() == name.lower():
+                    return category.category_id, name
+
+            for child in node.child_category_tree_nodes:
+                res = search(child)
+                if res:
+                    return res
+
+            return None
+
+        return search(tree.root_category_node)
+
+    def get_product_aspects(self, category_name: str) -> list[AspectType]:
+        try:
+            tree_id, tree = self._get_category_tree()
+        except EbayTaxonomyClientError as e:
+            raise MarketplaceAPIError from e
+
+        res = self._search_category(tree, category_name)
+        if res is None:
+            raise CategoryNotExistsError(f"Category '{category_name}' not found")
+
+        try:
+            id, _ = res
+            ebay_aspects = self._taxonomy_api.get_item_aspects(tree_id, id)
+            return self._from_ebay_aspects(ebay_aspects)
+        except EbayTaxonomyClientError as e:
+            raise MarketplaceAPIError from e
+
     def _load_images(self, *images: str):
         images_urls = []
         for img in images:
@@ -127,41 +190,6 @@ class EbayAPI(MarketplaceAPI):
                 self._selling_api.delete_offer(offer_id)
         except EbaySellingClientError:
             pass
-
-    def get_category_id(self, category_name: str) -> tuple[str, str]:
-        try:
-            _, tree = self._get_category_tree()
-        except EbayTaxonomyClientError as e:
-            raise MarketplaceAPIError from e
-
-        res = self._search_category(tree, category_name)
-        if res is None:
-            raise CategoryNotExistsError(f"Category '{category_name}' not found")
-
-        id, name = res
-        return id, name
-
-    def get_product_aspects(self, category_name: str) -> list[AspectType]:
-        try:
-            tree_id, tree = self._get_category_tree()
-        except EbayTaxonomyClientError as e:
-            raise MarketplaceAPIError from e
-
-        res = self._search_category(tree, category_name)
-        if res is None:
-            raise CategoryNotExistsError(f"Category '{category_name}' not found")
-
-        try:
-            id, _ = res
-            ebay_aspects = self._taxonomy_api.get_item_aspects(tree_id, id)
-            return self._from_ebay_aspects(ebay_aspects)
-        except EbayTaxonomyClientError as e:
-            raise MarketplaceAPIError from e
-
-    def _get_category_tree(self) -> tuple[str, ebay_models.CategoryTree]:
-        tree_id = self._taxonomy_api.get_default_tree_id(self._config.marketplace_id)
-        tree = self._taxonomy_api.fetch_category_tree(tree_id)
-        return tree_id, tree
 
     @classmethod
     def _from_ebay_aspects(
@@ -207,30 +235,6 @@ class EbayAPI(MarketplaceAPI):
         return aspects
 
     @staticmethod
-    def _search_category(
-        tree: ebay_models.CategoryTree, target: str
-    ) -> tuple[str, str] | None:
-        """Recursively search the node and its children for categoryName matches
-        and returns categoryId and categoryName."""
-
-        def search(n: ebay_models.CategoryTreeNode) -> tuple[str, str] | None:
-            if n.leaf_category_tree_node:
-                category = n.category
-                name = category.category_name
-
-                if name and target.lower() == name.lower():
-                    return category.category_id, name
-
-            for child in n.child_category_tree_nodes:
-                res = search(child)
-                if res:
-                    return res
-
-            return None
-
-        return search(tree.root_category_node)
-
-    @staticmethod
     def _product_to_inventory_item(
         item: EbayItem,
         images_urls: list[str],
@@ -261,17 +265,17 @@ class EbayAPI(MarketplaceAPI):
             description=item.description,
         )
 
-        marketplace_aspects = item.marketplace_aspects
-
-        package = None
-        if is_shipping:
-            package = ebay_models.PackageWeightAndSize(
-                **asdict(marketplace_aspects.package)
-            )
-
-        condition = marketplace_aspects.condition
-        condition_description = marketplace_aspects.condition_description
         try:
+            marketplace_aspects = item.marketplace_aspects
+            package = None
+            if is_shipping:
+                package = ebay_models.PackageWeightAndSize(
+                    **asdict(marketplace_aspects.package)
+                )
+
+            condition = marketplace_aspects.condition
+            condition_description = marketplace_aspects.condition_description
+
             return ebay_models.InventoryItem(
                 availability=availability,
                 condition=condition,
@@ -280,4 +284,4 @@ class EbayAPI(MarketplaceAPI):
                 condition_description=condition_description,
             )
         except ValidationError as e:
-            raise MarketplaceAPIError() from e
+            raise InvalidValueError() from e

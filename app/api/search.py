@@ -6,13 +6,22 @@ import aiofiles
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, File, Path, Response, UploadFile, status
 
+from ..core.services.price_statistics.price_statistics import (
+    ItemInfo,
+    StatisticsServiceError,
+)
 from ..core.services.search import SearchError
 from ..logger import logger
 from ..utils import utils
-from .dependencies import ISearchServicesFactory
+from .dependencies import IPriceStatisticsServicesFactory, ISearchServicesFactory
 from .models.common import Marketplace
-from .models.requests import ProductRequest
-from .models.responses import ErrorResponse, ProductCategoriesResponse, ProductResponse
+from .models.requests import ProductRequest, StatisticsRequest
+from .models.responses import (
+    ErrorResponse,
+    ProductCategoriesResponse,
+    ProductResponse,
+    StatisticsResponse,
+)
 
 PREFIX = "/search"
 
@@ -77,4 +86,38 @@ async def search_product_categories(
 
     return ProductCategoriesResponse(
         product_name=categories.product_name, categories=categories.categories
+    )
+
+
+@router.post(
+    "/{marketplace}/price_statistics",
+    response_model=Union[StatisticsResponse, ErrorResponse],
+)
+async def price_statistics(
+    response: Response,
+    request: StatisticsRequest,
+    statistics_factory: FromDishka[IPriceStatisticsServicesFactory],
+    marketplace: Marketplace = Path(...),
+):
+    statistics_service = statistics_factory.get(marketplace)
+
+    try:
+        info = ItemInfo(
+            name=request.name,
+            category_name=request.category,
+            currency=request.currency,
+        )
+        stat = statistics_service.calc_statistics(info, **(request.filters or {}))
+    except StatisticsServiceError as e:
+        logger.exception(f"Cannot calculate statistics: {e}", exc_info=True)
+
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return ErrorResponse(error="Failed to find product categories")
+
+    return StatisticsResponse(
+        min_price=stat.min_price,
+        max_price=stat.max_price,
+        mean_price=stat.mean_price,
+        mode_price=stat.mode_price,
+        median_price=stat.median_price,
     )

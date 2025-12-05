@@ -10,6 +10,7 @@ from ..domain.question import ProductStructure
 from ..domain.value_objects import AspectData
 from ..infrastructure.marketplace import (
     CategoryNotExistsError,
+    InvalidValueError,
     MarketplaceAPI,
     MarketplaceAPIError,
 )
@@ -18,6 +19,9 @@ from ..infrastructure.marketplace import (
 class SellingError(Exception):
     pass
 
+
+class ItemInvalidValueError(Exception):
+    pass
 
 class CategoryNotFound(SellingError):
     pass
@@ -74,10 +78,12 @@ class SellingService(SellingServiceABC):
         )
         try:
             self._marketplace_api.publish(item, *images)
-
+        except InvalidValueError as e:
+            raise ItemInvalidValueError() from e
+            
         except MarketplaceAPIError as e:
             raise SellingError() from e
-
+        
     def _validate_product_structure(
         self, category_name: str, aspects_data: Dict[str, Any]
     ) -> Product:

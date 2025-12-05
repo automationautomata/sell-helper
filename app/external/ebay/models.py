@@ -284,6 +284,225 @@ class CategorySuggestionResponse(EbayModel):
     category_tree_version: str
 
 
-class ImageResponse(EbayModel):
+class UploadImageResponse(EbayModel):
     expiration_date: str
     image_url: str
+
+
+# ------------------------------------------------------
+# Enums
+# ------------------------------------------------------
+
+
+class CompatibilityMatchEnum(str, Enum):
+    EXACT = "EXACT"
+    POSSIBLE = "POSSIBLE"
+
+
+class PriceTreatmentEnum(str, Enum):
+    MINIMUM_ADVERTISED_PRICE = "MINIMUM_ADVERTISED_PRICE"
+    LIST_PRICE = "LIST_PRICE"
+    MARKDOWN = "MARKDOWN"
+
+
+class PriceDisplayConditionEnum(str, Enum):
+    ONLY_SHOW_WHEN_ADDED_IN_CART = "ONLY_SHOW_WHEN_ADDED_IN_CART"
+    ONLY_SHOW_ON_REQUEST = "ONLY_SHOW_ON_REQUEST"
+    ALWAYS_SHOW = "ALWAYS_SHOW"
+
+
+class Image(EbayModel):
+    height: Optional[int] = None
+    image_url: Optional[str] = None
+    width: Optional[int] = None
+
+
+class ItemSummaryPrice(EbayModel):
+    converted_from_currency: Optional[str] = None
+    converted_from_value: Optional[str] = None
+    currency: Optional[str] = None
+    value: Optional[str] = None
+
+
+class Category(EbayModel):
+    category_id: Optional[str] = None
+    category_name: Optional[str] = None
+
+
+class CompatibilityProperty(EbayModel):
+    localized_name: Optional[str] = None
+    name: Optional[str] = None
+    value: Optional[str] = None
+
+
+class Address(EbayModel):
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    county: Optional[str] = None
+    postal_code: Optional[str] = None
+    state_or_province: Optional[str] = None
+
+
+class ShippingCost(EbayModel):
+    converted_from_currency: Optional[str] = None
+    converted_from_value: Optional[str] = None
+    currency: Optional[str] = None
+    value: Optional[str] = None
+
+
+class ShippingOption(EbayModel):
+    guaranteed_delivery: Optional[bool] = None
+    max_estimated_delivery_date: Optional[str] = None
+    min_estimated_delivery_date: Optional[str] = None
+    shipping_cost: Optional[ShippingCost] = None
+    shipping_cost_type: Optional[str] = None
+
+
+class Seller(EbayModel):
+    feedback_percentage: Optional[str] = None
+    feedback_score: Optional[int] = None
+    seller_account_type: Optional[str] = None
+    username: Optional[str] = None
+
+
+# ------------------------------------------------------
+# Marketing Price
+# ------------------------------------------------------
+
+
+class MarketingPrice(EbayModel):
+    discount_amount: Optional[ItemSummaryPrice] = None
+    discount_percentage: Optional[str] = None
+    original_price: Optional[ItemSummaryPrice] = None
+    price_treatment: Optional[PriceTreatmentEnum] = None
+
+
+# ------------------------------------------------------
+# Item Summary
+# ------------------------------------------------------
+
+
+class ItemSummary(EbayModel):
+    additional_images: Optional[List[Image]] = None
+    adult_only: Optional[bool] = None
+    available_coupons: Optional[bool] = None
+    bid_count: Optional[int] = None
+    buying_options: Optional[List[str]] = None
+    categories: Optional[List[Category]] = None
+    compatibility_match: Optional[CompatibilityMatchEnum] = None
+    compatibility_properties: Optional[List[CompatibilityProperty]] = None
+    condition: Optional[str] = None
+    condition_id: Optional[str] = None
+    current_bid_price: Optional[ItemSummaryPrice] = None
+    distance_from_pickup_location: Optional[dict] = None
+    energy_efficiency_class: Optional[str] = None
+    epid: Optional[str] = None
+    image: Optional[Image] = None
+    item_affiliate_web_url: Optional[str] = None
+    item_creation_date: Optional[str] = None
+    item_end_date: Optional[str] = None
+    item_group_href: Optional[str] = None
+    item_group_type: Optional[str] = None
+    item_href: Optional[str] = None
+    item_id: Optional[str] = None
+    item_location: Optional[Address] = None
+    item_origin_date: Optional[str] = None
+    item_web_url: Optional[str] = None
+    leaf_category_ids: Optional[List[str]] = None
+    legacy_item_id: Optional[str] = None
+    listing_marketplace_id: Optional[MarketplaceIdEnum] = None
+    marketing_price: Optional[MarketingPrice] = None
+    pickup_options: Optional[List[dict]] = None
+    price: Optional[ItemSummaryPrice] = None
+    price_display_condition: Optional[PriceDisplayConditionEnum] = None
+    priority_listing: Optional[bool] = None
+    qualified_programs: Optional[List[str]] = None
+    seller: Optional[Seller] = None
+    shipping_options: Optional[List[ShippingOption]] = None
+    short_description: Optional[str] = None
+    thumbnail_images: Optional[List[Image]] = None
+    title: Optional[str] = None
+    top_rated_buying_experience: Optional[bool] = None
+    tyre_label_image_url: Optional[str] = None
+    unit_price: Optional[ItemSummaryPrice] = None
+    unit_pricing_measure: Optional[str] = None
+    watch_count: Optional[int] = None
+
+
+# ------------------------------------------------------
+# Refinement
+# ------------------------------------------------------
+
+
+class AspectValueDistribution(EbayModel):
+    localized_aspect_value: Optional[str] = None
+    match_count: Optional[int] = None
+    refinement_href: Optional[str] = None
+
+
+class AspectDistribution(EbayModel):
+    localized_aspect_name: Optional[str] = None
+    aspect_value_distributions: Optional[List[AspectValueDistribution]] = None
+
+
+class BuyingOptionDistribution(EbayModel):
+    buying_option: Optional[str] = None
+    match_count: Optional[int] = None
+    refinement_href: Optional[str] = None
+
+
+class ConditionDistribution(EbayModel):
+    condition: Optional[str] = None
+    condition_id: Optional[str] = None
+    match_count: Optional[int] = None
+    refinement_href: Optional[str] = None
+
+
+class Refinement(EbayModel):
+    aspect_distributions: Optional[List[AspectDistribution]] = None
+    buying_option_distributions: Optional[List[BuyingOptionDistribution]] = None
+    category_distributions: Optional[List[Category]] = None
+    condition_distributions: Optional[List[ConditionDistribution]] = None
+    dominant_category_id: Optional[str] = None
+
+
+# ------------------------------------------------------
+# Warning
+# ------------------------------------------------------
+
+
+class ErrorParameter(EbayModel):
+    name: Optional[str] = None
+    value: Optional[str] = None
+
+
+class Warning(EbayModel):
+    category: Optional[str] = None
+    domain: Optional[str] = None
+    error_id: Optional[int] = None
+    input_ref_ids: Optional[List[str]] = None
+    long_message: Optional[str] = None
+    message: Optional[str] = None
+    output_ref_ids: Optional[List[str]] = None
+    parameters: Optional[List[ErrorParameter]] = None
+    subdomain: Optional[str] = None
+
+
+# ------------------------------------------------------
+# Root Response
+# ------------------------------------------------------
+
+
+class EbaySearchResponse(EbayModel):
+    auto_corrections: Optional[dict] = None
+    href: Optional[str] = None
+    item_summaries: Optional[List[ItemSummary]] = None
+    limit: Optional[int] = None
+    next: Optional[str] = None
+    offset: Optional[int] = None
+    prev: Optional[str] = None
+    refinement: Optional[Refinement] = None
+    total: Optional[int] = None
+    warnings: Optional[List[Warning]] = None

@@ -51,7 +51,7 @@ def db_session(db: DBConfig) -> sessionmaker:
         autoflush=False,
         bind=engine,
         expire_on_commit=False,
-        class_=AsyncSession
+        class_=AsyncSession,
     )
     return session_maker
 

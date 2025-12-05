@@ -6,6 +6,7 @@ import requests
 from ...config import EbayDomain
 from ...data import EnvKeys
 from ...utils import utils
+from .base_client import EbayClientBase
 from .errors import EbayRequestError
 from .models import (
     AspectMetadata,
@@ -13,8 +14,6 @@ from .models import (
     CategoryTree,
     MarketplaceIdEnum,
 )
-
-API_ENDPOINT = "/commerce/taxonomy/v1"
 
 
 class EbayTaxonomyClientError(EbayRequestError):
@@ -25,21 +24,18 @@ class EbayCategoriesNotFoundError(EbayRequestError):
     pass
 
 
-class EbayTaxonomyClient:
-    def __init__(self, domain: EbayDomain):  # type: ignore
-        self._url_base = f"https://{domain}{API_ENDPOINT}"
+class EbayTaxonomyClient(EbayClientBase):
+    API_ENDPOINT = "/commerce/taxonomy/v1"
 
     @utils.request_exception_chain(default=EbayTaxonomyClientError)
     def get_default_tree_id(self, marketplace_id: MarketplaceIdEnum) -> str:
         if marketplace_id == MarketplaceIdEnum.EBAY_MOTORS:
             marketplace_id = "EBAY_MOTORS_US"
 
-        url = f"{self._url_base}/get_default_category_tree_id"
+        url = f"{self.url_base}/get_default_category_tree_id"
         params = {"marketplace_id": marketplace_id}
-        headers = {
-            "Authorization": f"Bearer {os.getenv(EnvKeys.EBAY_USER_TOKEN)}",
-        }
-        resp = requests.get(url, params=params, headers=headers)
+
+        resp = requests.get(url, params=params, headers=self._auth_header())
         resp.raise_for_status()
         data = resp.json()
         return data["categoryTreeId"]
@@ -57,9 +53,9 @@ class EbayTaxonomyClient:
         Raises:
             EbayTaxonomyClientError: If the request fails
         """
-        url = f"{self._url_base}/category_tree/{tree_id}"
+        url = f"{self.url_base}/category_tree/{tree_id}"
         headers = {
-            "Authorization": f"Bearer {os.getenv(EnvKeys.EBAY_USER_TOKEN)}",
+            **self._auth_header(),
             "Accept-Encoding": "gzip",
         }
 
@@ -87,11 +83,9 @@ class EbayTaxonomyClient:
             EbayTaxonomyClientError: If the request fails
         """
         resp = requests.get(
-            url=f"{self._url_base}/category_tree/{category_tree_id}/get_item_aspects_for_category",
+            url=f"{self.url_base}/category_tree/{category_tree_id}/get_item_aspects_for_category",
             params={"category_id": category_id},
-            headers={
-                "Authorization": f"Bearer {os.getenv(EnvKeys.EBAY_USER_TOKEN)}",
-            },
+            headers=self._auth_header(),
         )
         resp.raise_for_status()
         return AspectMetadata.model_validate(resp.json())
@@ -116,10 +110,8 @@ class EbayTaxonomyClient:
             EbayTaxonomyClientError: If the request fails
         """
         resp = requests.get(
-            url=f"{self._url_base}/category_tree/{category_tree_id}/get_category_suggestions",
+            url=f"{self.url_base}/category_tree/{category_tree_id}/get_category_suggestions",
             params={"q": query},
-            headers={
-                "Authorization": f"Bearer {os.getenv(EnvKeys.EBAY_USER_TOKEN)}",
-            },
+            headers=self._auth_header(),
         )
         return CategorySuggestionResponse.model_validate(resp.json())

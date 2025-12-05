@@ -69,3 +69,11 @@ class ProductResponse(BaseModel):
 
 class PublishItemResponse(BaseModel):
     status: str
+
+
+class StatisticsResponse(BaseModel):
+    mean_price: float
+    mode_price: float
+    median_price: float
+    min_price: float
+    max_price: float

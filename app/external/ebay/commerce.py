@@ -6,31 +6,30 @@ from ...config import EbayDomain
 from ...data import EnvKeys
 from ...utils import utils
 from ..ebay.errors import EbayRequestError
-from .models import ImageResponse
-
-API_ENDPOINT = "/commerce/media/v1_beta"
+from .base_client import EbayClientBase
+from .models import UploadImageResponse
 
 
 class CommerceClientError(EbayRequestError):
-    def __init__(self) -> None:
-        cause = self.__cause__
-        if isinstance(cause, requests.HTTPError):
-            self.response_content = cause.response.text
+    pass
 
 
-class EbayCommerceClient:
+class EbayCommerceClient(EbayClientBase):
+    API_ENDPOINT = "/commerce/media/v1_beta"
+
     def __init__(self, domain: EbayDomain):  # type: ignore
         subdomain = ".sandbox" if "sandbox" in domain else ""
-        self.URL_BASE = f"https://apim{subdomain}.ebay.com{API_ENDPOINT}"
+        self._url_base = f"https://apim{subdomain}.ebay.com{self.API_ENDPOINT}"
+
+    @property
+    def url_base(self):
+        return self._url_base
 
     @utils.request_exception_chain(default=CommerceClientError)
-    def upload_image(self, img_path: str) -> ImageResponse:
+    def upload_image(self, img_path: str) -> UploadImageResponse:
         """Upload image and returnes imageUrl"""
-        url = f"{self.URL_BASE}/image/create_image_from_file"
-        headers = {
-            "Authorization": f"Bearer {os.getenv(EnvKeys.EBAY_USER_TOKEN)}",
-        }
+        url = f"{self.url_base}/image/create_image_from_file"
 
         files = {"image": open(img_path, "rb")}
-        response = requests.post(url, headers=headers, files=files)
-        return ImageResponse.model_validate(response.json())
+        response = requests.post(url, headers=self._auth_header(), files=files)
+        return UploadImageResponse.model_validate(response.json())
