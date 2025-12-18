@@ -3,7 +3,7 @@ import tempfile
 from typing import Union
 
 import aiofiles
-from dishka.integrations.fastapi import DishkaRoute, FromDishka  # noqa: F811
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, File, Path, Response, UploadFile, status
 
 from ..core.services.search import SearchError

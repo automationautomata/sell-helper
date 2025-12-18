@@ -2,11 +2,10 @@ import os
 
 import requests
 
-from ..ebay.errors import EbayRequestError
-
 from ...config import EbayDomain
 from ...data import EnvKeys
 from ...utils import utils
+from ..ebay.errors import EbayRequestError
 from .models import ImageResponse
 
 API_ENDPOINT = "/commerce/media/v1_beta"

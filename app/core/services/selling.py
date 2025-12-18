@@ -1,55 +1,23 @@
-from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import Any, Dict
 
 from pydantic import TypeAdapter
 
-from ..domain.errors import InvalidProductData
-from ..domain.item import Item, Product, TMarketplaceAspects
-from ..domain.question import ProductStructure
-from ..domain.value_objects import AspectData
-from ..infrastructure.marketplace import (
+from ..domain.entities.errors import InvalidProductData
+from ..domain.entities.item import Item, Product, TMarketplaceAspects
+from ..domain.entities.question import ProductStructure
+from ..domain.ports import CategoryNotFound, ItemData, SellingError
+from .ports import (
     CategoryNotExistsError,
-    MarketplaceAPI,
+    IMarketplaceAPI,
     MarketplaceAPIError,
 )
 
 
-class SellingError(Exception):
-    pass
-
-
-class CategoryNotFound(SellingError):
-    pass
-
-
-@dataclass
-class ItemData:
-    title: str
-    description: str
-    price: float
-    currency: str
-    country: str
-    quantity: int
-    category: str
-
-
-class SellingServiceABC(ABC):
-    @abstractmethod
-    def sell_item(
-        self,
-        item_data: ItemData,
-        marketplace_aspects_data: Dict[str, Any],
-        product_data: list[AspectData],
-        *images: str,
-    ) -> None:
-        pass
-
-
-class SellingService(SellingServiceABC):
+class SellingService:
     def __init__(
         self,
-        marketplace_api: MarketplaceAPI,
+        marketplace_api: IMarketplaceAPI,
         marketplace_aspects_type: TMarketplaceAspects,
     ):
         self._marketplace_api = marketplace_api

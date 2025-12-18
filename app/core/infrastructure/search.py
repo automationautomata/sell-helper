@@ -1,6 +1,5 @@
 import json
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from perplexity import Perplexity as PerplexityClient
 from perplexity import PerplexityError
@@ -13,44 +12,12 @@ from ...external.ebay.taxonomy import (
     EbayTaxonomyClientError,
 )
 from ...utils import recognition
+from ..domain.entities.question import Answer, Question
+from ..infrastructure.adapter import QuestionAdapter, QuestionAdapterError
+from ..services.ports import CategoriesNotFoundError, SearchEngineError
 
 
-class SearchEngineError(Exception):
-    pass
-
-
-class CategoriesNotFoundError(SearchEngineError):
-    pass
-
-
-class SearchEngine(ABC):
-    @abstractmethod
-    def by_product_name(
-        self, product_name: str, comment: str, json_schema: Dict[str, Any]
-    ) -> Dict:
-        """raise SearchEngineError"""
-        pass
-
-    @abstractmethod
-    def by_barecode(self, barecode: str) -> str:
-        """Search product name by barecode.
-
-        raise SearchEngineError
-        """
-        pass
-
-    @abstractmethod
-    def barecodes_on_image(self, img_path: str) -> list[str]:
-        """raise SearchEngineError"""
-        pass
-
-    @abstractmethod
-    def categories(self, product_name: str) -> list[str]:
-        """raise CategoriesNotFoundError or SearchEngineError"""
-        pass
-
-
-class PerplexityAndEbaySearch(SearchEngine):
+class PerplexityAndEbaySearch:
     _SYSTEM_ROLE_CONTENT = "You are a search system"
     _PRODUCT_SEARCH_TEMPLATE = (
         "Provide information about {product} without sourses links"
@@ -70,11 +37,24 @@ class PerplexityAndEbaySearch(SearchEngine):
         self._taxonomy_api = taxonomy_client
 
     def by_product_name(
-        self, product_name: str, comment: str, json_schema: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self,
+        product_name: str,
+        comment: str,
+        qusetion: Question,
+    ) -> Answer:
         text = self._product_search_text(product_name, comment)
+
+        adapter = QuestionAdapter()
+        try:
+            json_schema = adapter.to_schema(qusetion)
+        except QuestionAdapterError as e:
+            raise SearchEngineError() from e
+
         content = self._perplexity_request(text, json_schema, "json_schema")
-        return json.loads(content)
+        try:
+            return adapter.to_answer(qusetion, json.loads(content))
+        except QuestionAdapterError as e:
+            raise SearchEngineError("Failed to parse answer") from e
 
     def barecodes_on_image(self, img_path: str) -> str:
         return recognition.extract_barcodes(img_path)
@@ -107,7 +87,7 @@ class PerplexityAndEbaySearch(SearchEngine):
     @classmethod
     def _product_search_text(cls, product: str, comment: str) -> str:
         template = cls._PRODUCT_SEARCH_TEMPLATE
-        mapping = dict(product=product)
+        mapping = {"product": product}
 
         if comment:
             mapping.update(comment=comment)
@@ -135,7 +115,7 @@ class PerplexityAndEbaySearch(SearchEngine):
         self,
         text: str,
         response_format: Optional[Dict | str] = None,
-        response_type: Literal["json_schema", "regex"] = None,
+        response_type: Optional[Literal["json_schema", "regex"]] = None,
     ) -> str:
         messages = self._convert(text)
 

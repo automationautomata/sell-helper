@@ -109,7 +109,8 @@ class EbayTaxonomyClient:
             query (str): The string to get category suggestions for
 
         Returns:
-            CategorySuggestionResponse: The category suggestions response containing matched categories
+            CategorySuggestionResponse:
+                The category suggestions response containing matched categories
 
         Raises:
             EbayTaxonomyClientError: If the request fails

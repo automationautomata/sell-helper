@@ -4,7 +4,7 @@ from typing import List, Union
 
 import aiofiles
 from dishka import FromDishka
-from dishka.integrations.fastapi import DishkaRoute, FromDishka  # noqa: F811
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import (
     APIRouter,
     Body,

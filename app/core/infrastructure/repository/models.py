@@ -1,12 +1,11 @@
 from sqlalchemy import String
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, registry
+
+mapper_registry = registry()
 
 
-class Base(DeclarativeBase):
-    pass
-
-
-class UserModel(Base):
+@mapper_registry.mapped
+class UserModel:
     __tablename__ = "users"
 
     email: Mapped[str] = mapped_column(String, primary_key=True)

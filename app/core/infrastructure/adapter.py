@@ -1,12 +1,11 @@
 import re
-from abc import abstractmethod
 from dataclasses import make_dataclass
 from typing import Any, Dict, Literal, Optional
 
 from pydantic import TypeAdapter, ValidationError
 
-from ..domain.errors import InvalidProductData
-from ..domain.question import Answer, Question
+from ..domain.entities.errors import InvalidProductData
+from ..domain.entities.question import Answer, Question
 
 
 class QuestionAdapterError(Exception):
@@ -21,23 +20,7 @@ class InvalidProduct(QuestionAdapterError):
     pass
 
 
-class QuestionAdapterABC:
-    """Converts a domain Question into a JSON schema for search APIs,
-    parses API responses back into domain Answer."""
-
-    @classmethod
-    @abstractmethod
-    def to_schema(cls, qusetion: Question) -> Dict[str, Any]:
-        pass
-
-    @classmethod
-    @abstractmethod
-    def to_answer(cls, raw_data: Dict[str, Any], qusetion: Question) -> Answer:
-        """raises InvalidMetadata and InvalidProduct"""
-        pass
-
-
-class QuestionAdapter(QuestionAdapterABC):
+class QuestionAdapter:
     _QUESTION_DATACLASS_NAME = "Question"
     _PRODUCT_FIELD_NAME = "product"
     _METADATA_FIELD_NAME = "metadata"

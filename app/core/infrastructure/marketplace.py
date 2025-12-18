@@ -1,5 +1,4 @@
 import uuid
-from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from typing import Optional
 
@@ -10,35 +9,9 @@ from ...external.ebay import models as ebay_models
 from ...external.ebay.commerce import CommerceClientError, EbayCommerceClient
 from ...external.ebay.selling import EbaySellingClient, EbaySellingClientError
 from ...external.ebay.taxonomy import EbayTaxonomyClient, EbayTaxonomyClientError
-from ..domain.ebay.item import EbayItem
-from ..domain.item import Item
-from ..domain.value_objects import AspectField, AspectType
-
-
-class MarketplaceAPIError(Exception):
-    pass
-
-
-class CategoryNotExistsError(MarketplaceAPIError):
-    pass
-
-
-class InvalidValue(MarketplaceAPIError):
-    pass
-
-
-class MarketplaceAPI(ABC):
-    @abstractmethod
-    def publish(self, product: Item, *images: str) -> None:
-        pass
-
-    @abstractmethod
-    def get_category_id(self, category_name: str) -> str:
-        pass
-
-    @abstractmethod
-    def get_product_aspects(self, category_name: str) -> list[AspectField]:
-        pass
+from ..domain.entities.ebay.item import EbayItem
+from ..domain.entities.value_objects import AspectField, AspectType
+from ..services.ports import CategoryNotExistsError, MarketplaceAPIError
 
 
 @dataclass
@@ -48,7 +21,7 @@ class EbayClients:
     commerce_client: EbayCommerceClient
 
 
-class EbayAPI(MarketplaceAPI):
+class EbayAPI:
     def __init__(self, config: EbayConfig, clients: EbayClients):
         self._config = config
 

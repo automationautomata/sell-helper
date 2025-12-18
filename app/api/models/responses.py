@@ -3,8 +3,8 @@ from typing import Any, Dict, Union
 
 from pydantic import BaseModel
 
-from ...core.domain.ebay.value_objects import PriceRange
-from ...core.domain.question import Answer
+from ...core.domain.entities.ebay.value_objects import PriceRange
+from ...core.domain.entities.question import Answer
 from .common import Package
 
 

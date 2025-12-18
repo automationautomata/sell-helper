@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Final, Generic, List, Type, TypeVar, final
 
-from ..domain.errors import InvalidProductData
+from .errors import InvalidProductData
 from .value_objects import (
     AspectData,
     AspectField,

@@ -1,6 +1,4 @@
 import os
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Type
 
@@ -8,37 +6,10 @@ import jwt
 from pydantic import TypeAdapter, ValidationError
 
 from ...data import EnvKeys
+from ..services.ports import InvalidPayloadTypeError, InvalidTokenError, JWTToken
 
 
-class JWTAuthError(Exception):
-    pass
-
-
-class InvalidTokenError(JWTAuthError):
-    pass
-
-
-class InvalidPayloadTypeError(JWTAuthError):
-    pass
-
-
-@dataclass
-class JWTToken:
-    token: str
-    expires_at: datetime
-
-
-class JWTAuthABC[T](ABC):
-    @abstractmethod
-    def generate_token(self, data: T) -> JWTToken:
-        pass
-
-    @abstractmethod
-    def verify_token(self, token: str, payload_data_type: Type[T]) -> Any:
-        pass
-
-
-class JWTAuth(JWTAuthABC):
+class JWTAuth:
     def __init__(self, jwt_ttl_minutes: int, jwt_algorithm: str):
         self._jwt_ttl_minutes = jwt_ttl_minutes
         self._jwt_algorithm = jwt_algorithm
