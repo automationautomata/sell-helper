@@ -1,58 +1,25 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-
-from ..domain.question import Answer, ProductStructure, Question, TMetadata
-from ..infrastructure.adapter import (
-    InvalidMetadata,
-    InvalidProduct,
-    QuestionAdapterABC,
-    ValidationError,
+from app.core.domain.ports import (
+    ProductCategories,
+    ProductCategoriesNotFoundError,
+    SearchError,
 )
-from ..infrastructure.marketplace import MarketplaceAPI
-from ..infrastructure.search import (
+
+from ..domain.entities.question import Answer, ProductStructure, Question, TMetadata
+from .ports import (
     CategoriesNotFoundError,
-    SearchEngine,
+    IMarketplaceAPI,
+    ISearchEngine,
     SearchEngineError,
 )
 
 
-class SearchError(Exception):
-    pass
-
-
-class ProductCategoriesNotFoundError(SearchError):
-    pass
-
-
-@dataclass(frozen=True)
-class ProductCategories:
-    product_name: str
-    categories: list[str]
-
-
-class SearchServiceABC(ABC):
-    DEAFULT_QUESTION = "Provide information by the image"
-
-    @abstractmethod
-    def product(self, product_name: str, category: str, comment: str) -> Answer:
-        """Search product by name and category"""
-        pass
-
-    @abstractmethod
-    def product_categories(self, img_path: str) -> ProductCategories:
-        """Search categories by product name"""
-        pass
-
-
-class SearchService(SearchServiceABC):
+class SearchService:
     def __init__(
         self,
-        search: SearchEngine,
-        marketplace_api: MarketplaceAPI,
-        adapter: QuestionAdapterABC,
+        search: ISearchEngine,
+        marketplace_api: IMarketplaceAPI,
         metadata_type: TMetadata,
     ) -> None:
-        self._adapter = adapter
         self._search = search
         self._marketplace_api = marketplace_api
         self._metadata_type = metadata_type
@@ -64,24 +31,11 @@ class SearchService(SearchServiceABC):
             product_structure=ProductStructure(aspects),
             metadata_type=self._metadata_type,
         )
-        schema = self._adapter.to_schema(q)
 
         try:
-            raw_data = self._search.by_product_name(product_name, comment, schema)
+            return self._search.by_product_name(product_name, comment, q)
         except SearchEngineError as e:
             raise SearchError() from e
-
-        try:
-            return self._adapter.to_answer(raw_data, q)
-
-        except InvalidProduct as e:
-            raise SearchError("Failed to parse product aspects data") from e
-
-        except InvalidMetadata as e:
-            raise SearchError("Failed to parse product metadata") from e
-
-        except ValidationError as e:
-            raise SearchError("Failed to parse product metadata") from e
 
     def product_categories(self, img_path: str) -> ProductCategories:
         barecodes = self._search.barecodes_on_image(img_path)

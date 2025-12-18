@@ -1,7 +1,7 @@
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
-from ..core.services.auth import AuthServiceABC
+from ..core.domain.ports import IAuthService
 from ..logger import logger
 from .models.responses import ErrorResponse
 
@@ -12,7 +12,7 @@ class authentication:
 
     async def __call__(self, request: Request, call_next):
         container = request.state.dishka_container
-        auth_service: AuthServiceABC = await container.get(AuthServiceABC)
+        auth_service: IAuthService = await container.get(IAuthService)
 
         path = request.url.path
         if not any(map(path.startswith, self._prefixes)):

@@ -1,44 +1,19 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
-from ..domain.user import User
-from ..infrastructure.auth import InvalidTokenError, JWTAuthABC
-from ..infrastructure.hasher import IHasher
-from ..infrastructure.repository.user import UsersRepositoryABC
+from ..domain.entities.user import User
+from ..domain.ports import Token
+from .ports import IHasher, IJWTAuth, IUsersRepository
+from ..infrastructure.auth import InvalidTokenError
 
 
-class AuthError(Exception):
-    pass
-
-
-@dataclass
-class Token:
-    token: str
-    ttl_seconds: int
-
-
-class AuthServiceABC(ABC):
-    @abstractmethod
-    async def verify_user(self, email: str, password: str) -> bool:
-        pass
-
-    @abstractmethod
-    def create_access_token(self, email: str) -> Token:
-        pass
-
-    @abstractmethod
-    async def validate(token: str) -> Optional[User]:
-        pass
-
-
-class AuthService(AuthServiceABC):
+class AuthService:
     @dataclass
     class TokenPayload:
         email: str
 
     def __init__(
-        self, hasher: IHasher, user_repo: UsersRepositoryABC, jwt_auth: JWTAuthABC
+        self, hasher: IHasher, user_repo: IUsersRepository, jwt_auth: IJWTAuth
     ):
         self._hasher = hasher
         self._user_repo = user_repo

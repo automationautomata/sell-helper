@@ -1,20 +1,13 @@
-from abc import ABC, abstractmethod
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from ...domain.user import User
+from ...domain.entities.user import User
 from .models import UserModel
 
 
-class UsersRepositoryABC(ABC):
-    @abstractmethod
-    async def get_user_by_email(self, email: str) -> Optional[User]:
-        pass
-
-
-class UsersRepository(ABC):
+class UsersRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 

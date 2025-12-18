@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import AsyncIterable, Dict, Type
 
-from app.api.models.common import Marketplace
 from dishka import (
     FromComponent,
     Provider,
@@ -11,23 +10,30 @@ from dishka import (
     provide,
 )
 from perplexity import Perplexity as PerplexityClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .api.dependencies import ISearchServicesFactory, ISellingServicesFactory
+from .api.models.common import Marketplace
 from .api.models.requests import MarketplaceAspects
 from .config import EbayConfig, PerplexityConfig
-from .core.domain.ebay.item import EbayMarketplaceAspects
-from .core.domain.ebay.question import EbayMetadata
-from .core.domain.question import Metadata
-from .core.infrastructure.adapter import QuestionAdapter, QuestionAdapterABC
-from .core.infrastructure.auth import JWTAuth, JWTAuthABC
-from .core.infrastructure.hasher import IHasher
-from .core.infrastructure.marketplace import EbayAPI, EbayClients, MarketplaceAPI
-from .core.infrastructure.repository.user import UsersRepository, UsersRepositoryABC
-from .core.infrastructure.search import PerplexityAndEbaySearch, SearchEngine
-from .core.services.auth import AuthService, AuthServiceABC
-from .core.services.search import SearchService, SearchServiceABC
-from .core.services.selling import SellingService, SellingServiceABC
+from .core.domain.entities.ebay.item import EbayMarketplaceAspects
+from .core.domain.entities.ebay.question import EbayMetadata
+from .core.domain.entities.question import Metadata
+from .core.domain.ports import IAuthService, ISearchService, ISellingService
+from .core.infrastructure.auth import JWTAuth
+from .core.infrastructure.marketplace import EbayAPI, EbayClients
+from .core.infrastructure.repository.user import UsersRepository
+from .core.infrastructure.search import PerplexityAndEbaySearch
+from .core.services.auth import AuthService
+from .core.services.ports import (
+    IHasher,
+    IJWTAuth,
+    IMarketplaceAPI,
+    ISearchEngine,
+    IUsersRepository,
+)
+from .core.services.search import SearchService
+from .core.services.selling import SellingService
 from .external.ebay.commerce import EbayCommerceClient
 from .external.ebay.selling import EbaySellingClient
 from .external.ebay.taxonomy import EbayTaxonomyClient
@@ -43,30 +49,30 @@ class AuthServiceProvider(Provider):
     hasher = from_context(IHasher, scope=Scope.APP)
     jwt_settings = from_context(JWTAuthSettings, scope=Scope.APP)
 
-    def __init__(self, session_maker: async_sessionmaker, scope=None, component=None):
+    def __init__(self, async_session_factory: AsyncSession, scope=None, component=None):
         super().__init__(scope, component)
-        self._session_maker = session_maker
+        self._async_session_factory = async_session_factory
 
     @provide(scope=Scope.APP)
     async def session(self) -> AsyncIterable[AsyncSession]:
-        async with self._session_maker() as session:
+        async with self._async_session_factory() as session:
             yield session
 
     @provide(scope=Scope.REQUEST)
-    def jwt_auth(self, jwt_settings: JWTAuthSettings) -> JWTAuthABC:
+    def jwt_auth(self, jwt_settings: JWTAuthSettings) -> IJWTAuth:
         return JWTAuth(
             jwt_settings.jwt_ttl_minutes,
             jwt_settings.jwt_algorithm,
         )
 
     @provide(scope=Scope.REQUEST)
-    def user_repository(self, session: AsyncSession) -> UsersRepositoryABC:
+    def user_repository(self, session: AsyncSession) -> IUsersRepository:
         return UsersRepository(session)
 
     @provide(scope=Scope.REQUEST)
     def auth_service(
-        self, hasher: IHasher, user_repo: UsersRepositoryABC, jwt_auth: JWTAuthABC
-    ) -> AuthServiceABC:
+        self, hasher: IHasher, user_repo: IUsersRepository, jwt_auth: IJWTAuth
+    ) -> IAuthService:
         return AuthService(hasher, user_repo, jwt_auth)
 
 
@@ -74,10 +80,6 @@ class EbayProvider(Provider):
     component = "ebay"
     ebay_config = from_context(EbayConfig, scope=Scope.APP)
     perplexity_config = from_context(PerplexityConfig, scope=Scope.APP)
-
-    question_adapter = provide(
-        QuestionAdapter, provides=QuestionAdapterABC, scope=Scope.APP
-    )
 
     @provide(scope=Scope.APP)
     def metadata_type(self) -> Type[Metadata]:
@@ -90,7 +92,7 @@ class EbayProvider(Provider):
     @provide(scope=Scope.APP)
     def search(
         self, perplexity_config: PerplexityConfig, ebay_config: EbayConfig
-    ) -> SearchEngine:
+    ) -> ISearchEngine:
         perplexity_client = PerplexityClient()
         taxonomy_client = EbayTaxonomyClient(ebay_config.domain)
         return PerplexityAndEbaySearch(
@@ -98,7 +100,7 @@ class EbayProvider(Provider):
         )
 
     @provide(scope=Scope.APP)
-    def merketplace(self, ebay_config: EbayConfig) -> MarketplaceAPI:
+    def merketplace(self, ebay_config: EbayConfig) -> IMarketplaceAPI:
         clients = EbayClients(
             selling_client=EbaySellingClient(ebay_config.domain),
             taxonomy_client=EbayTaxonomyClient(ebay_config.domain),
@@ -109,39 +111,36 @@ class EbayProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def search_service(
         self,
-        search_engine: SearchEngine,
-        marketplace_api: MarketplaceAPI,
-        question_adapter: QuestionAdapterABC,
+        search_engine: ISearchEngine,
+        marketplace_api: IMarketplaceAPI,
         metadata_type: Type[Metadata],
-    ) -> SearchServiceABC:
-        return SearchService(
-            search_engine, marketplace_api, question_adapter, metadata_type
-        )
+    ) -> ISearchService:
+        return SearchService(search_engine, marketplace_api, metadata_type)
 
     @provide(scope=Scope.REQUEST)
     def selling_service(
         self,
-        marketplace_api: MarketplaceAPI,
+        marketplace_api: IMarketplaceAPI,
         marketplace_aspects_type: Type[MarketplaceAspects],
-    ) -> SellingServiceABC:
+    ) -> ISellingService:
         return SellingService(marketplace_api, marketplace_aspects_type)
 
 
 class SellingServicesFactory:
-    def __init__(self, mapping: Dict[Marketplace, SellingServiceABC]):
+    def __init__(self, mapping: Dict[Marketplace, ISellingService]):
         self._mapping = mapping
 
-    def get(self, marketplace: str) -> SearchServiceABC:
+    def get(self, marketplace: str) -> ISellingService:
         if marketplace not in self._mapping:
             raise ValueError(f"Invalid marketplace name {marketplace}")
         return self._mapping[marketplace]
 
 
 class SearchServicesFactory:
-    def __init__(self, mapping: Dict[Marketplace, SearchServiceABC]):
+    def __init__(self, mapping: Dict[Marketplace, ISearchService]):
         self._mapping = mapping
 
-    def get(self, marketplace: str) -> SellingServiceABC:
+    def get(self, marketplace: str) -> ISearchService:
         if marketplace not in self._mapping:
             raise ValueError(f"Invalid marketplace name {marketplace}")
         return self._mapping[marketplace]
@@ -149,21 +148,19 @@ class SearchServicesFactory:
 
 class ServicesFactoriesProvider(Provider):
     ebay_search = alias(
-        source=SearchServiceABC, provides=SearchServiceABC, component="ebay"
+        source=ISearchService, provides=ISearchService, component="ebay"
     )
 
-    ebay_selling = alias(
-        SellingServiceABC, provides=SellingServiceABC, component="ebay"
-    )
+    ebay_selling = alias(ISellingService, provides=ISellingService, component="ebay")
 
     @provide(scope=Scope.REQUEST)
     def selling_services_factory(
-        self, ebay_selling: SellingServiceABC = FromComponent("ebay")
+        self, ebay_selling: ISellingService = FromComponent("ebay")
     ) -> ISellingServicesFactory:
         return SellingServicesFactory({Marketplace.EBAY: ebay_selling})
 
     @provide(scope=Scope.REQUEST)
     def search_services_factory(
-        self, ebay_search: SearchServiceABC = FromComponent("ebay")
+        self, ebay_search: ISearchService = FromComponent("ebay")
     ) -> ISearchServicesFactory:
         return SellingServicesFactory({Marketplace.EBAY: ebay_search})

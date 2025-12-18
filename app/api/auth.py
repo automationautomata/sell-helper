@@ -1,7 +1,7 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, status
 
-from ..core.services.auth import AuthServiceABC
+from ..core.domain.ports import IAuthService
 from ..logger import logger
 from .models.requests import UserSingInRequest
 from .models.responses import TokenResponse
@@ -12,7 +12,7 @@ router = APIRouter(route_class=DishkaRoute, prefix=PREFIX)
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(user: UserSingInRequest, auth_service: FromDishka[AuthServiceABC]):
+async def login(user: UserSingInRequest, auth_service: FromDishka[IAuthService]):
     try:
         check = await auth_service.verify_user(user.email, user.password)
     except Exception as e:
