@@ -1,15 +1,17 @@
 import os
 import tempfile
 from typing import Union
+from uuid import UUID
 
 import aiofiles
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, File, Path, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Path, Response, UploadFile, status
 
 from ..core.services.search import SearchError
 from ..logger import logger
 from ..utils import utils
 from .dependencies import ISearchServicesFactory
+from .middlewares import get_user_uuid
 from .models.common import Marketplace
 from .models.requests import ProductRequest
 from .models.responses import ErrorResponse, ProductCategoriesResponse, ProductResponse
@@ -20,18 +22,19 @@ router = APIRouter(route_class=DishkaRoute, prefix=PREFIX)
 
 
 @router.post(
-    "/{marketplace}/product", response_model=Union[ProductResponse, ErrorResponse]
+    "/{marketplace}/name", response_model=Union[ProductResponse, ErrorResponse]
 )
 async def search_by_product_name(
     product: ProductRequest,
     response: Response,
     search_factory: FromDishka[ISearchServicesFactory],
     marketplace: Marketplace = Path(...),
+    user_uuid: UUID = Depends(get_user_uuid),
 ):
     searcher = search_factory.get(marketplace)
     try:
         answer = searcher.product(
-            product.product_name, product.category, product.comment
+            user_uuid, product.product_name, product.category, product.comment
         )
     except SearchError as e:
         logger.exception(f"Cannot process product: {e}", exc_info=True)
@@ -51,6 +54,7 @@ async def search_product_categories(
     search_factory: FromDishka[ISearchServicesFactory],
     image: UploadFile = File(...),
     marketplace: Marketplace = Path(...),
+    user_uuid: UUID = Depends(get_user_uuid),
 ):
     searcher = search_factory.get(marketplace)
     with tempfile.TemporaryDirectory(prefix="search_by_image_") as temp_dir:
@@ -68,7 +72,7 @@ async def search_product_categories(
             return ErrorResponse(error="Failed to process image")
 
         try:
-            categories = searcher.product_categories(temp_path)
+            categories = searcher.product_categories(user_uuid, temp_path)
         except SearchError as e:
             logger.exception(f"Cannot process product: {e}", exc_info=True)
 

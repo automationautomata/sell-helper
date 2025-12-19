@@ -2,13 +2,14 @@ import uuid
 from dataclasses import asdict, dataclass
 from typing import Optional
 
+from app.core.infrastructure.common import EbayUtils
 from pydantic import ValidationError
+from shared.ebay_api import models as ebay_models
+from shared.ebay_api.commerce import CommerceClientError, EbayCommerceClient
+from shared.ebay_api.selling import EbaySellingClient, EbaySellingClientError
+from shared.ebay_api.taxonomy import EbayTaxonomyClient, EbayTaxonomyClientError
 
 from ...config import EbayConfig
-from ...external.ebay import models as ebay_models
-from ...external.ebay.commerce import CommerceClientError, EbayCommerceClient
-from ...external.ebay.selling import EbaySellingClient, EbaySellingClientError
-from ...external.ebay.taxonomy import EbayTaxonomyClient, EbayTaxonomyClientError
 from ..domain.entities.ebay.item import EbayItem
 from ..domain.entities.value_objects import AspectField, AspectType
 from ..services.ports import CategoryNotExistsError, MarketplaceAPIError
@@ -29,7 +30,7 @@ class EbayAPI:
         self._taxonomy_api = clients.taxonomy_client
         self._commerce_api = clients.commerce_client
 
-    def publish(self, item: EbayItem, *images: str):
+    def publish(self, item: EbayItem, token: str, *images: str):
         try:
             images_urls = self._load_images(*images)
         except CommerceClientError as e:
@@ -37,7 +38,9 @@ class EbayAPI:
 
         try:
             sku = uuid.uuid4().hex.upper()[:50]
-            category_id, _ = self.get_category_id(item.category)
+            utils = EbayUtils(self._taxonomy_api, token)
+            dto = utils.get_category_id(item.category, self._config.marketplace_id)
+            category_id = dto.category_id
         except EbaySellingClientError as e:
             raise MarketplaceAPIError() from e
 
@@ -45,8 +48,7 @@ class EbayAPI:
         try:
             self._selling_api.create_or_replace_inventory_item(sku, inventory_item)
         except EbaySellingClientError as e:
-            self._publish_cleanup(sku)
-
+            self._publish_cleanup(token, sku)
             raise MarketplaceAPIError() from e
 
         try:
@@ -55,14 +57,14 @@ class EbayAPI:
 
             self._selling_api.publish_offer(offer_id)
         except EbaySellingClientError as e:
-            self._publish_cleanup(sku, offer_id)
+            self._publish_cleanup(token, sku, offer_id)
 
             raise MarketplaceAPIError() from e
 
-    def _load_images(self, *images: str):
+    def _load_images(self, token: str, *images: str):
         images_urls = []
         for img in images:
-            img_response = self._commerce_api.upload_image(img)
+            img_response = self._commerce_api.upload_image(img, token)
             images_urls.append(img_response.image_url)
         return images_urls
 
@@ -93,48 +95,32 @@ class EbayAPI:
             returnPolicyId=return_policy_id,
         )
 
-    def _publish_cleanup(self, sku: str, offer_id: Optional[str] = None):
+    def _publish_cleanup(self, token: str, sku: str, offer_id: Optional[str] = None):
         try:
-            self._selling_api.delete_inventory_item(sku)
+            self._selling_api.delete_inventory_item(sku, token)
             if offer_id:
-                self._selling_api.delete_offer(offer_id)
+                self._selling_api.delete_offer(offer_id, token)
         except EbaySellingClientError:
             pass
 
-    def get_category_id(self, category_name: str) -> tuple[str, str]:
+    def get_product_aspects(self, category_name: str, token: str) -> list[AspectType]:
         try:
-            _, tree = self._get_category_tree()
+            utils = EbayUtils(self._taxonomy_api, token)
+            dto = utils.get_category_id(category_name, self._config.marketplace_id)
         except EbayTaxonomyClientError as e:
             raise MarketplaceAPIError from e
 
-        res = self._search_category(tree, category_name)
-        if res is None:
-            raise CategoryNotExistsError(f"Category '{category_name}' not found")
-
-        id, name = res
-        return id, name
-
-    def get_product_aspects(self, category_name: str) -> list[AspectType]:
-        try:
-            tree_id, tree = self._get_category_tree()
-        except EbayTaxonomyClientError as e:
-            raise MarketplaceAPIError from e
-
-        res = self._search_category(tree, category_name)
-        if res is None:
-            raise CategoryNotExistsError(f"Category '{category_name}' not found")
+        if dto is None:
+            raise CategoryNotExistsError(category_name)
 
         try:
-            id, _ = res
-            ebay_aspects = self._taxonomy_api.get_item_aspects(tree_id, id)
+            tree_id, category_id = dto.tree_id, category_id
+            ebay_aspects = self._taxonomy_api.get_item_aspects(
+                tree_id, category_id, token
+            )
             return self._from_ebay_aspects(ebay_aspects)
         except EbayTaxonomyClientError as e:
             raise MarketplaceAPIError from e
-
-    def _get_category_tree(self) -> tuple[str, ebay_models.CategoryTree]:
-        tree_id = self._taxonomy_api.get_default_tree_id(self._config.marketplace_id)
-        tree = self._taxonomy_api.fetch_category_tree(tree_id)
-        return tree_id, tree
 
     @classmethod
     def _from_ebay_aspects(
@@ -178,30 +164,6 @@ class EbayAPI:
             )
 
         return aspects
-
-    @staticmethod
-    def _search_category(
-        tree: ebay_models.CategoryTree, target: str
-    ) -> tuple[str, str] | None:
-        """Recursively search the node and its children for categoryName matches
-        and returns categoryId and categoryName."""
-
-        def search(n: ebay_models.CategoryTreeNode) -> tuple[str, str] | None:
-            if n.leaf_category_tree_node:
-                category = n.category
-                name = category.category_name
-
-                if name and target.lower() == name.lower():
-                    return category.category_id, name
-
-            for child in n.child_category_tree_nodes:
-                res = search(child)
-                if res:
-                    return res
-
-            return None
-
-        return search(tree.root_category_node)
 
     @staticmethod
     def _product_to_inventory_item(

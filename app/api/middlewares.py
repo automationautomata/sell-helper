@@ -1,9 +1,15 @@
+import uuid
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
 from ..core.domain.ports import IAuthService
 from ..logger import logger
 from .models.responses import ErrorResponse
+
+
+def get_user_uuid(request: Request) -> uuid.UUID:
+    return request.state.user_uuid
 
 
 class authentication:
@@ -40,4 +46,6 @@ class authentication:
                 content=ErrorResponse("Authorization header missing or invalid"),
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
+        request.state.user_uuid = user.uuid
+
         return await call_next(request)

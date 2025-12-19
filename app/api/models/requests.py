@@ -7,7 +7,12 @@ from pydantic import BaseModel, model_validator
 from .common import Package
 
 
-class UserSingInRequest(BaseModel):
+class UserLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class UseRegistrationRequest(BaseModel):
     email: str
     password: str
 
@@ -59,3 +64,8 @@ class SellItemRequest(BaseModel):
         if isinstance(value, (str, bytes, bytearray)):
             return json.loads(value)
         return value
+
+
+class OAuthCodeRequest(BaseModel):
+    code: str
+    state: str

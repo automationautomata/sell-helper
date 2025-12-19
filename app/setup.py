@@ -1,25 +1,35 @@
 import os
-from datetime import datetime
 from typing import Literal
 
 import yaml
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dishka import make_async_container
 from dishka.integrations.fastapi import FastapiProvider
 from fastapi import APIRouter
-from fastapi.concurrency import asynccontextmanager
 from passlib.hash import pbkdf2_sha256
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from . import dependencies as dep
-from .api.auth import router as auth_router
+from .api.login import router as login_router
+from .api.registration import router as reg_router
 from .api.search import router as search_router
 from .api.selling import router as selling_router
 from .config import Config, DBConfig, EbayConfig, PerplexityConfig
+from .core.infrastructure.providers import (
+    EbayInfrastructureProvider,
+    JWTAuthProvider,
+    JWTAuthSettings,
+    PerplexitySettings,
+)
+from .core.repository.providers import RepositoryProvider
 from .core.services.ports import IHasher
+from .core.services.providers import AuthServiceProvider, ServicesProvider
 from .data import EnvKeys, Pathes
-from .utils import utils
+from .providers import (
+    DBProvider,
+    EbayProvider,
+    PerplexityClientProvider,
+    ServicesFactoriesProvider,
+)
 
 
 def _load_yaml(path: str) -> dict:
@@ -51,31 +61,15 @@ def db_session(db: DBConfig) -> sessionmaker:
         autoflush=False,
         bind=engine,
         expire_on_commit=False,
-        class_=AsyncSession
+        class_=AsyncSession,
     )
     return session_maker
 
 
-def lifespan(ebay_config: EbayConfig):
-    @asynccontextmanager
-    async def lifespan(app):
-        scheduler = AsyncIOScheduler()
-        job = utils.token_update_job(scheduler, ebay_config)
-        scheduler.add_job(
-            job, "date", run_date=datetime.now(), name="ebay token fetching"
-        )
-        scheduler.start()
-
-        yield
-
-        await app.state.dishka_container.close()
-
-    return lifespan
-
-
 def root_router(prefix: str):
     root_router = APIRouter(prefix=prefix)
-    root_router.include_router(auth_router)
+    root_router.include_router(reg_router)
+    root_router.include_router(login_router)
     root_router.include_router(search_router)
     root_router.include_router(selling_router)
     return root_router
@@ -83,17 +77,22 @@ def root_router(prefix: str):
 
 def container(session: sessionmaker, ebay: EbayConfig, perplexity: PerplexityConfig):
     providers = [
-        dep.EbayProvider(),
-        dep.ServicesFactoriesProvider(),
-        dep.AuthServiceProvider(session),
+        DBProvider(session),
+        EbayProvider(),
+        PerplexityClientProvider(),
+        JWTAuthProvider(),
+        EbayInfrastructureProvider(),
+        RepositoryProvider(),
+        AuthServiceProvider(),
+        ServicesProvider().to_component("ebay"),
+        ServicesFactoriesProvider(),
         FastapiProvider(),
     ]
 
     context = {
         EbayConfig: ebay,
-        PerplexityConfig: perplexity,
-        dep.JWTAuthSettings: dep.JWTAuthSettings(20, "HS256"),
+        PerplexitySettings: PerplexitySettings(model=perplexity.model),
+        JWTAuthSettings: JWTAuthSettings(20, "HS256"),
         IHasher: pbkdf2_sha256,
     }
-
     return make_async_container(*providers, context=context)

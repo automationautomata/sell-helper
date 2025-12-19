@@ -3,6 +3,9 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, alias_generators
 
+EbayDomain = Literal["api.ebay.com", "api.sandbox.ebay.com"]
+
+
 # --- ENUMS ---
 
 
@@ -166,6 +169,14 @@ class Offer(EbayModel):
 class RefreshTokenResponse(EbayModel):
     access_token: str
     expires_in: int
+    token_type: str
+
+
+class GetTokenResponse(EbayModel):
+    access_token: str
+    expires_in: int
+    refresh_token: str
+    refresh_token_expires_in: int
     token_type: str
 
 
