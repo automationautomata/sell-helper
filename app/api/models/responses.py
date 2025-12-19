@@ -69,3 +69,7 @@ class ProductResponse(BaseModel):
 
 class PublishItemResponse(BaseModel):
     status: str
+
+
+class AuthURLResponse(BaseModel):
+    auth_url: str

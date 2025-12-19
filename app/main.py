@@ -12,7 +12,7 @@ ebay_mode = os.getenv("EBAY_MODE", "sandbox")
 
 config = setup.load_config(ebay_mode)
 
-app = FastAPI(lifespan=setup.lifespan(config.ebay))
+app = FastAPI()
 
 root_prefix = "/api"
 app.include_router(setup.root_router(root_prefix))

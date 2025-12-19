@@ -3,14 +3,14 @@ from typing import Dict, List, Literal, Optional
 
 from perplexity import Perplexity as PerplexityClient
 from perplexity import PerplexityError
-
-from ...config import EbayConfig, PerplexityConfig
-from ...external import barcode_search
-from ...external.ebay.taxonomy import (
+from shared import barcode
+from shared.ebay_api.taxonomy import (
     EbayCategoriesNotFoundError,
     EbayTaxonomyClient,
     EbayTaxonomyClientError,
 )
+
+from ...config import EbayConfig, PerplexityConfig
 from ...utils import recognition
 from ..domain.entities.question import Answer, Question
 from ..infrastructure.adapter import QuestionAdapter, QuestionAdapterError
@@ -26,14 +26,14 @@ class PerplexityAndEbaySearch:
 
     def __init__(
         self,
-        perplexity_config: PerplexityConfig,
+        perplexity_model: PerplexityConfig,
         perplexity_client: PerplexityClient,
-        ebay_config: EbayConfig,
+        marketplace_id: EbayConfig,
         taxonomy_client: EbayTaxonomyClient,
     ):
         self._perplexity_client = perplexity_client
-        self._perplexity_model = perplexity_config.model
-        self._ebay_config = ebay_config
+        self._perplexity_model = perplexity_model
+        self._ebay_marketplace_id = marketplace_id
         self._taxonomy_api = taxonomy_client
 
     def by_product_name(
@@ -61,16 +61,16 @@ class PerplexityAndEbaySearch:
 
     def by_barecode(self, barecode):
         try:
-            return barcode_search.search(barecode)
-        except barcode_search.BarcodeSearchError as e:
+            return barcode.search(barecode)
+        except barcode.BarcodeSearchError as e:
             raise SearchEngineError("Failed to find product") from e
 
-    def categories(self, product_name: str) -> list[str]:
-        marketplace_id = self._ebay_config.marketplace_id
-        tree_id = self._taxonomy_api.get_default_tree_id(marketplace_id)
+    def categories(self, product_name: str, token: str) -> list[str]:
+        marketplace_id = self._ebay_marketplace_id
+        tree_id = self._taxonomy_api.get_default_tree_id(marketplace_id, token)
         try:
             response = self._taxonomy_api.get_category_suggestions(
-                tree_id, product_name
+                tree_id, product_name, token
             )
             categories = []
             for suggestion in response.category_suggestions:

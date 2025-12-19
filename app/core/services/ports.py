@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional, Protocol, Type
@@ -68,6 +69,9 @@ class IHasher(Protocol):
     def verify(plain: str, hash: str) -> bool:
         pass
 
+    def hash(data: str) -> str:
+        pass
+
 
 class MarketplaceAPIError(Exception):
     pass
@@ -92,6 +96,70 @@ class IMarketplaceAPI(Protocol):
         pass
 
 
+class UserRepositoryError(Exception):
+    pass
+
+
+class UserAlreadyExistsError(UserRepositoryError):
+    pass
+
+
 class IUsersRepository(Protocol):
+    async def get_user_by_uuid(self, uuid: uuid.UUID) -> Optional[User]:
+        pass
+
     async def get_user_by_email(self, email: str) -> Optional[User]:
+        pass
+
+    async def add_user(self, email: str, password_hash: str) -> User:
+        pass
+
+
+class MarketplaceOAuthError(Exception):
+    pass
+
+
+@dataclass
+class MarketplaceTokens:
+    access_token: str
+    refresh_token: str
+    refresh_token_ttl: int
+    access_token_ttl: int
+
+
+class IMarketplaceOAuth(Protocol):
+    def get_tokens(self, code: str) -> MarketplaceTokens:
+        pass
+
+    def generate_auth_url(self, state: str) -> str:
+        pass
+
+
+class AccessTokensStorageError(Exception):
+    pass
+
+
+@dataclass
+class Token:
+    token: str
+    ttl: int
+
+
+class IAccessTokensStorage(Protocol):
+    async def store(self, key: str, token: Token) -> None:
+        pass
+
+    async def get(self, key: str) -> Token:
+        pass
+
+
+class RefreshTokensStorageError(Exception):
+    pass
+
+
+class IRefreshTokensStorage(Protocol):
+    async def store(self, uuid: uuid.UUID, token: Token) -> None:
+        pass
+
+    async def remove(self, uuid: uuid.UUID) -> Token:
         pass

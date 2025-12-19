@@ -1,6 +1,7 @@
 import os
 import tempfile
 from typing import List, Union
+from uuid import UUID
 
 import aiofiles
 from dishka import FromDishka
@@ -8,6 +9,7 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import (
     APIRouter,
     Body,
+    Depends,
     File,
     Path,
     Response,
@@ -23,6 +25,7 @@ from ..core.services.selling import (
 from ..logger import logger
 from ..utils import utils
 from .dependencies import ISellingServicesFactory
+from .middlewares import get_user_uuid
 from .models.common import Marketplace
 from .models.requests import SellItemRequest
 from .models.responses import ErrorResponse, PublishItemResponse
@@ -38,6 +41,7 @@ router = APIRouter(route_class=DishkaRoute, prefix=PREFIX)
 async def publish_item(
     response: Response,
     selling_factory: FromDishka[ISellingServicesFactory],
+    user_uuid: UUID = Depends(get_user_uuid),
     item: SellItemRequest = Body(...),
     images: List[UploadFile] = File(...),
     marketplace: Marketplace = Path(...),
@@ -65,7 +69,11 @@ async def publish_item(
             marketplace_aspects_data = data.pop("marketplace_aspects")
             product_data = data.pop("product")
             seller.sell_item(
-                ItemData(**data), marketplace_aspects_data, product_data, *images_pathes
+                user_uuid,
+                ItemData(**data),
+                marketplace_aspects_data,
+                product_data,
+                *images_pathes,
             )
         except SellingError as e:
             logger.exception(f"Failed to publish item: {e}")
