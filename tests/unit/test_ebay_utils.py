@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.core.infrastructure.common import EbayUtils, CategoryDTO
-from app.external.ebay import models as ebay_models
+from app....external.ebay_api import models as ebay_models
 
 
 def make_tree_with_child(cat_id, cat_name, leaf=True):

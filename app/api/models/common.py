@@ -19,7 +19,3 @@ class Dimension(BaseModel):
 class Package(BaseModel):
     weight: Weight
     dimensions: Optional[Dimension] = None
-
-
-class Marketplace(str, Enum):
-    EBAY = "ebay"

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock
 from pydantic import BaseModel, ValidationError
 
-from app.core.services.selling import (
+from app.core.services.selling.selling import (
     SellingService,
     SellingServiceABC,
     SellingError,
@@ -20,6 +20,7 @@ from app.core.domain.value_objects import AspectField, AspectType
 
 class FakeMarketplaceAspects(BaseModel):
     """Mock marketplace aspects for testing."""
+
     marketplace: str
     condition: str
 
@@ -80,7 +81,7 @@ def valid_marketplace_aspects_data():
 
 
 @pytest.fixture
-def valid_product_data():
+def valid_product():
     """Create valid product data."""
     return {
         "brand": "Apple",
@@ -90,12 +91,13 @@ def valid_product_data():
 
 # -------------------- TEST: sell_item -------------------- #
 
+
 def test_sell_item_success(
     selling_service,
     mock_marketplace_api,
     item_data,
     valid_marketplace_aspects_data,
-    valid_product_data,
+    valid_product,
     valid_product_aspects,
 ):
     """Test successful item selling."""
@@ -104,7 +106,7 @@ def test_sell_item_success(
     selling_service.sell_item(
         item_data,
         valid_marketplace_aspects_data,
-        valid_product_data,
+        valid_product,
         "image1.jpg",
         "image2.jpg",
     )
@@ -131,7 +133,7 @@ def test_sell_item_marketplace_api_error_on_publish(
     mock_marketplace_api,
     item_data,
     valid_marketplace_aspects_data,
-    valid_product_data,
+    valid_product,
     valid_product_aspects,
 ):
     """Test MarketplaceAPIError during publish raises SellingError."""
@@ -142,7 +144,7 @@ def test_sell_item_marketplace_api_error_on_publish(
         selling_service.sell_item(
             item_data,
             valid_marketplace_aspects_data,
-            valid_product_data,
+            valid_product,
             "image.jpg",
         )
 
@@ -151,7 +153,7 @@ def test_sell_item_invalid_marketplace_aspects(
     selling_service,
     mock_marketplace_api,
     item_data,
-    valid_product_data,
+    valid_product,
     valid_product_aspects,
 ):
     """Test invalid marketplace aspects data raises error."""
@@ -163,23 +165,24 @@ def test_sell_item_invalid_marketplace_aspects(
         selling_service.sell_item(
             item_data,
             invalid_aspects,
-            valid_product_data,
+            valid_product,
             "image.jpg",
         )
 
 
 # -------------------- TEST: _validate_product_structure -------------------- #
 
+
 def test_validate_product_structure_success(
     selling_service,
     mock_marketplace_api,
     valid_product_aspects,
-    valid_product_data,
+    valid_product,
 ):
     """Test successful product structure validation."""
     mock_marketplace_api.get_product_aspects.return_value = valid_product_aspects
 
-    product = selling_service._validate_product_structure("Phones", valid_product_data)
+    product = selling_service._validate_product_structure("Phones", valid_product)
 
     assert isinstance(product, Product)
     assert len(product.aspects) == 2
@@ -220,10 +223,10 @@ def test_validate_product_structure_missing_required_aspect(
     mock_marketplace_api.get_product_aspects.return_value = valid_product_aspects
 
     # Missing required 'brand' field
-    product_data = {"storage": "128GB"}
+    product = {"storage": "128GB"}
 
     with pytest.raises(CategoryNotFound):
-        selling_service._validate_product_structure("Phones", product_data)
+        selling_service._validate_product_structure("Phones", product)
 
 
 def test_validate_product_structure_invalid_aspect_value(
@@ -235,10 +238,10 @@ def test_validate_product_structure_invalid_aspect_value(
     mock_marketplace_api.get_product_aspects.return_value = valid_product_aspects
 
     # Invalid brand value (not in allowed values)
-    product_data = {"brand": "Sony", "storage": "128GB"}
+    product = {"brand": "Sony", "storage": "128GB"}
 
     with pytest.raises(CategoryNotFound):
-        selling_service._validate_product_structure("Phones", product_data)
+        selling_service._validate_product_structure("Phones", product)
 
 
 def test_validate_product_structure_unexpected_aspect(
@@ -250,10 +253,10 @@ def test_validate_product_structure_unexpected_aspect(
     mock_marketplace_api.get_product_aspects.return_value = valid_product_aspects
 
     # Extra unexpected field
-    product_data = {"brand": "Apple", "storage": "128GB", "extra": "field"}
+    product = {"brand": "Apple", "storage": "128GB", "extra": "field"}
 
     with pytest.raises(CategoryNotFound):
-        selling_service._validate_product_structure("Phones", product_data)
+        selling_service._validate_product_structure("Phones", product)
 
 
 def test_validate_product_structure_incorrect_type(
@@ -265,13 +268,14 @@ def test_validate_product_structure_incorrect_type(
     mock_marketplace_api.get_product_aspects.return_value = valid_product_aspects
 
     # Wrong type for brand (should be string)
-    product_data = {"brand": 123, "storage": "128GB"}
+    product = {"brand": 123, "storage": "128GB"}
 
     with pytest.raises(CategoryNotFound):
-        selling_service._validate_product_structure("Phones", product_data)
+        selling_service._validate_product_structure("Phones", product)
 
 
 # -------------------- TEST: sell_item with different aspect types -------------------- #
+
 
 def test_sell_item_with_numeric_aspect(
     selling_service,
@@ -289,12 +293,12 @@ def test_sell_item_with_numeric_aspect(
     ]
     mock_marketplace_api.get_product_aspects.return_value = aspects
 
-    product_data = {"warranty_months": 12}
+    product = {"warranty_months": 12}
 
     selling_service.sell_item(
         item_data,
         valid_marketplace_aspects_data,
-        product_data,
+        product,
         "image.jpg",
     )
 
@@ -317,12 +321,12 @@ def test_sell_item_with_list_aspect(
     ]
     mock_marketplace_api.get_product_aspects.return_value = aspects
 
-    product_data = {"colors": ["red", "blue"]}
+    product = {"colors": ["red", "blue"]}
 
     selling_service.sell_item(
         item_data,
         valid_marketplace_aspects_data,
-        product_data,
+        product,
         "image.jpg",
     )
 
@@ -331,12 +335,13 @@ def test_sell_item_with_list_aspect(
 
 # -------------------- TEST: sell_item with multiple images -------------------- #
 
+
 def test_sell_item_with_no_images(
     selling_service,
     mock_marketplace_api,
     item_data,
     valid_marketplace_aspects_data,
-    valid_product_data,
+    valid_product,
     valid_product_aspects,
 ):
     """Test selling item with no images."""
@@ -345,7 +350,7 @@ def test_sell_item_with_no_images(
     selling_service.sell_item(
         item_data,
         valid_marketplace_aspects_data,
-        valid_product_data,
+        valid_product,
     )
 
     mock_marketplace_api.publish.assert_called_once()
@@ -359,7 +364,7 @@ def test_sell_item_with_single_image(
     mock_marketplace_api,
     item_data,
     valid_marketplace_aspects_data,
-    valid_product_data,
+    valid_product,
     valid_product_aspects,
 ):
     """Test selling item with single image."""
@@ -368,7 +373,7 @@ def test_sell_item_with_single_image(
     selling_service.sell_item(
         item_data,
         valid_marketplace_aspects_data,
-        valid_product_data,
+        valid_product,
         "image.jpg",
     )
 
@@ -378,6 +383,7 @@ def test_sell_item_with_single_image(
 
 
 # -------------------- TEST: SellingServiceABC interface -------------------- #
+
 
 def test_selling_service_implements_interface():
     """Test that SellingService implements SellingServiceABC."""

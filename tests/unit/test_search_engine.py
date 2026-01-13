@@ -1,13 +1,11 @@
-import json
-
 import pytest
 from app.core.infrastructure.search import (
     CategoriesNotFoundError,
     PerplexityAndEbaySearch,
     SearchEngineError,
 )
-from app.external import barcode_search
-from app.external.ebay.taxonomy import (
+from app...external import barcode_search
+from app....external.ebay_api.taxonomy import (
     EbayCategoriesNotFoundError,
     EbayTaxonomyClientError,
 )
@@ -44,6 +42,7 @@ def perplexity_config():
 
 class MockTestModel(BaseModel):
     """Mock model for testing search responses."""
+
     name: str
 
 
@@ -62,20 +61,18 @@ def service(
 def test_by_product_name_success(service, fake_perplexity_client):
     """Test successful product name search returns parsed JSON dict."""
     test_json = MockTestModel(name="abc").model_dump_json()
-    
+
     fake_perplexity_client.chat.completions.create.return_value.choices = [
         type(
             "Choice",
             (),
-            {
-                "message": type(
-                    "Msg", (), {"content": test_json}
-                )
-            },
+            {"message": type("Msg", (), {"content": test_json})},
         )
     ]
 
-    result = service.by_product_name("TV", "great one", MockTestModel.model_json_schema())
+    result = service.by_product_name(
+        "TV", "great one", MockTestModel.model_json_schema()
+    )
     # by_product_name returns a dict (parsed JSON), not a Pydantic model
     assert result == {"name": "abc"}
     fake_perplexity_client.chat.completions.create.assert_called_once()
