@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Protocol
+from typing import Protocol
 
 from requests import codes
 from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
@@ -43,15 +44,8 @@ class TokenUpdater(Protocol):
         pass
 
 
-class auth_retry:
-    def __call__(self, cls: TokenUpdater):
-        auth_method = cls.__dict__.get("update_token")
-        for attr_name, attr_value in cls.__dict__.items():
-            if callable(attr_value) and attr_name != "update_token":
-                setattr(cls, attr_name, self._wrap_method(attr_value, auth_method))
-        return cls
-
-    def _wrap_method(self, method: Callable, auth_method: Callable[[], None]):
+def auth_retry[T: TokenUpdater](cls: T) -> T:
+    def _wrap_method(method: Callable, auth_method: Callable[[], None]):
         @wraps(method)
         def wrapper(*args, **kwargs):
             try:
@@ -63,3 +57,9 @@ class auth_retry:
             return method(*args, **kwargs)
 
         return wrapper
+
+    auth_method = cls.__dict__.get("update_token")
+    for attr_name, attr_value in cls.__dict__.items():
+        if callable(attr_value) and attr_name != "update_token":
+            setattr(cls, attr_name, _wrap_method(attr_value, auth_method))
+    return cls

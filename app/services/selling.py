@@ -7,16 +7,20 @@ from ..domain.entities import (
     MarketplaceAccount,
     ProductStructure,
 )
-from ..domain.entities.errors import AspectsValidationError
+from ..domain.entities.errors import (
+    AspectsValidationError,
+)
 from ..domain.ports import (
-    CategoryNotFound,
-    SellingError,
-    UserAuthorizationFailed,
-    UserUnauthorisedError,
+    InvalidCategory,
+    InvalidMarketplaceAspects,
+    InvalidProductAspects,
+    MarketplaceAuthorizationFailed,
+    SellingServiceError,
+    UserUnauthorisedInMarketplace,
 )
 from .mapping import FromDTO
 from .ports import (
-    CategoryNotFoundError,
+    CategoryNotFound,
     IAccessTokenStorage,
     IMarketplaceAPIFactory,
     IMarketplaceAspectsFactory,
@@ -24,7 +28,6 @@ from .ports import (
     IRefreshTokenStorage,
     MarketplaceAPIError,
     MarketplaceOAuthError,
-    RefreshTokenStorageError,
     TokenStorageError,
 )
 
@@ -38,30 +41,32 @@ class SellingService:
     token_ttl_threshold: int
     type_factory: IMarketplaceAspectsFactory
 
-    async def publish(
-        self, item_data: ItemDTO, account: MarketplaceAccountDTO, *images: str
-    ):
+    async def publish(self, dto: ItemDTO, account: MarketplaceAccountDTO, *images: str):
+        item_data = asdict(dto)
         markeplace_aspects_type = self.type_factory.get(account.marketplace)
         marketplace_aspects = markeplace_aspects_type.validate(
-            item_data.marketplace_aspects_data
+            item_data.pop("marketplace_aspects_data")
         )
+        if marketplace_aspects is None:
+            raise InvalidMarketplaceAspects()
+
         product_aspects = self._validate_product_structure(
-            item_data.category, item_data.product_aspects
+            item_data["category"], item_data.pop("product_aspects")
         )
 
         item = Item(
-            **asdict(item),
+            **item_data,
             marketplace_aspects=marketplace_aspects,
             product_aspects=product_aspects,
         )
         token = await self._access_token(FromDTO.account(account))
 
         try:
-            marketplace_api = self.api_factory.get(marketplace_api)
+            marketplace_api = self.api_factory.get(account.marketplace)
             marketplace_api.publish(item, token, *images)
 
         except MarketplaceAPIError as e:
-            raise CategoryNotFound() from e
+            raise SellingServiceError() from e
 
     def _validate_product_structure(
         self, category_name: str, aspects_data: dict[str], marketplace: str
@@ -72,17 +77,23 @@ class SellingService:
 
             product_structure = ProductStructure(fields=fields)
             return product_structure.validate(aspects_data)
+
         except (
             MarketplaceAPIError,
-            CategoryNotFoundError,
+            CategoryNotFound,
             AspectsValidationError,
         ) as e:
-            raise SellingError() from e
+            error_mapping = {
+                MarketplaceAPIError: SellingServiceError(),
+                CategoryNotFound: InvalidCategory(),
+                AspectsValidationError: InvalidProductAspects(),
+            }
+            raise error_mapping[type(e)] from e
 
     async def _access_token(self, account: MarketplaceAccount) -> str:
         try:
             access_token = await self.access_token_storage.get(account)
-        except TokenStorageError as e:
+        except TokenStorageError:
             pass
 
         if access_token is not None and access_token.ttl < self.token_ttl_threshold:
@@ -91,16 +102,18 @@ class SellingService:
         try:
             refresh_token = await self.refresh_token_storage.get(account)
         except TokenStorageError as e:
-            raise UserAuthorizationFailed()
+            raise MarketplaceAuthorizationFailed() from e
 
         if refresh_token is None:
-            raise UserUnauthorisedError()
+            raise UserUnauthorisedInMarketplace()
 
         try:
             oauth = self.oauth_factory.get(account.marketplace)
+
             access_token = await oauth.new_access_token(refresh_token.token)
             await self.access_token_storage.store(account, access_token.token)
 
             return access_token.token
+
         except (MarketplaceOAuthError, TokenStorageError) as e:
-            raise UserAuthorizationFailed() from e
+            raise MarketplaceAuthorizationFailed() from e

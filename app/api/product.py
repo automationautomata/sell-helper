@@ -1,9 +1,9 @@
 import os
 import tempfile
-from typing import List
 from uuid import UUID
 
 import aiofiles
+from app.domain.ports.errors import InvalidMarketplaceAspects, InvalidProductAspects
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import (
     APIRouter,
@@ -19,12 +19,13 @@ from fastapi import (
 from ..data import Marketplace
 from ..domain.dto import ItemDTO, MarketplaceAccountDTO
 from ..domain.ports import (
-    CategoryNotFound,
+    InvalidCategory,
+    InvalidItemStructure,
     ISearchService,
     ISellingService,
+    MarketplaceAuthorizationFailed,
     SearchServiceError,
-    SellingError,
-    UserUnauthorisedError,
+    SellingServiceError,
 )
 from ..logger import logger
 from ..utils import utils
@@ -151,7 +152,7 @@ async def publish_item(
     seller: FromDishka[ISellingService],
     user_uuid: UUID = Depends(get_user_uuid),
     item: PublishItem = Body(...),
-    images: List[UploadFile] = File(...),
+    images: list[UploadFile] = File(...),
     marketplace: Marketplace = Path(...),
 ) -> PublishItemResponse:
     with tempfile.TemporaryDirectory(prefix="selling_images_") as tmpdir:
@@ -174,18 +175,28 @@ async def publish_item(
 
             return PublishItemResponse(status="success")
 
-        except SellingError as e:
+        except (
+            InvalidCategory,
+            InvalidItemStructure,
+            MarketplaceAuthorizationFailed,
+        ) as e:
+            if isinstance(e, MarketplaceAuthorizationFailed):
+                logger.debug(f"User unauthorised in {marketplace}: {e}", exc_info=True)
+
+            detail_mapping = {
+                InvalidCategory: f"Invalid category: {item.category}",
+                MarketplaceAuthorizationFailed: f"User unauthorised in {marketplace}",
+                InvalidProductAspects: "Invalid product aspects",
+                InvalidMarketplaceAspects: "Invalid marketplace aspects",
+            }
+
+            detail = detail_mapping[type(e)]
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+        except SellingServiceError as e:
             logger.exception(f"Failed to publish item: {e}")
 
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to publish item",
             )
-        except (CategoryNotFound, UserUnauthorisedError) as e:
-            detail = f"Invalid category: {item.category}"
-
-            if isinstance(e, UserUnauthorisedError):
-                detail = f"User unauthorised in {marketplace}"
-                logger.debug(f"User unauthorised in {marketplace}: {e}", exc_info=True)
-
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)

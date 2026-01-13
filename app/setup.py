@@ -47,9 +47,9 @@ def container(config: Config) -> AsyncContainer:
     providers = [
         DBProvider(),
         RedisProvider(),
+        OAuthProvider(),
         EbayProvider(),
         MarketplaceMappingsProvider(),
-        OAuthProvider(),
         PerplexityClientProvider(),
         InfrastructureProvider(),
         EbayInfrastructureProvider(),
@@ -67,7 +67,7 @@ def container(config: Config) -> AsyncContainer:
         EbayConfig: ext_services.ebay,
         PerplexityToken: config.tokens.perplexity_token,
         SearchEngineSettings: SearchEngineSettings(
-            barcode_search_token=config.tokens.barcode_searcher_token,
+            barcode_search_token=config.tokens.barcode_search_token,
             perplexity_model=ext_services.perplexity.model,
         ),
         SellingServiceSettings: SellingServiceSettings(

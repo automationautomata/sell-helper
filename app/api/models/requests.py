@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import BaseModel, model_validator
 
@@ -72,12 +72,12 @@ class PublishItem(BaseModel):
     country: str
     quantity: int
     category: str
-    product_aspects: Dict[str, Any]
+    product_aspects: dict[str, Any]
     marketplace_aspects_data: MarketplaceAspectsUnion
 
     @model_validator(mode="before")
     @classmethod
     def validator(cls, value):
-        if isinstance(value, (str, bytes, bytearray)):
+        if isinstance(value, str | bytes | bytearray):
             return json.loads(value)
         return value

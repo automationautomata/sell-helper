@@ -12,7 +12,8 @@ RUN apt-get update && \
         libxext6 \
         libxrender1 \
         libgl1 \
-        libzbar0 && \
+        libzbar0 \
+	libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
 FROM base AS builder
@@ -34,5 +35,3 @@ WORKDIR /app
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY app ./app
 COPY config ./config
-
-ENV APP=app.main:app

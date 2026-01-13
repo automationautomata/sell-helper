@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Protocol, Self, Type
+from typing import Any, Protocol, Self
 
 
 class AspectType(str, Enum):
@@ -10,7 +10,7 @@ class AspectType(str, Enum):
     STR = "str"
     INT = "int"
 
-    def py_type(self) -> Type:
+    def py_type(self) -> type:
         type_mapping = {
             AspectType.STR: str,
             AspectType.INT: int,

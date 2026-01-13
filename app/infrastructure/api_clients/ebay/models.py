@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, alias_generators
 
@@ -90,7 +90,7 @@ class Dimension(EbayModel):
 
 class PackageWeightAndSize(EbayModel):
     weight: Weight
-    dimensions: Optional[Dimension] = None
+    dimensions: Dimension | None = None
 
 
 class PickupAtLocationAvailability(EbayModel):
@@ -104,24 +104,24 @@ class ShipToLocationAvailability(EbayModel):
 
 
 class Availability(EbayModel):
-    ship_to_location_availability: Optional[ShipToLocationAvailability] = None
-    pickup_at_location_availability: Optional[List[PickupAtLocationAvailability]] = None
+    ship_to_location_availability: ShipToLocationAvailability | None = None
+    pickup_at_location_availability: list[PickupAtLocationAvailability] | None = None
 
 
 class NameValuePair(EbayModel):
     name: str
-    value: List[str] = Field(default_factory=list)
+    value: list[str] = Field(default_factory=list)
 
 
 class ItemAspects(EbayModel):
-    name_value_list: List[NameValuePair] = Field(default_factory=list)
+    name_value_list: list[NameValuePair] = Field(default_factory=list)
 
 
 class Product(EbayModel):
     title: str
     description: str
     brand: str | None = None
-    image_urls: List[str] | None = None
+    image_urls: list[str] | None = None
     aspects: dict[str, list[str]] | None = None
 
 
@@ -262,7 +262,7 @@ class CategoryTreeNode(EbayModel):
     category: Category
     category_tree_node_level: int
     child_category_tree_nodes: list["CategoryTreeNode"] = Field(default_factory=list)
-    leaf_category_tree_node: Optional[bool] = None
+    leaf_category_tree_node: bool | None = None
     parent_category_tree_node_href: str | None = None
 
 
@@ -285,12 +285,12 @@ class CategoryTreeNodeAncestor(EbayModel):
 
 class CategorySuggestion(EbayModel):
     category: Category
-    category_tree_node_ancestors: List[CategoryTreeNodeAncestor]
+    category_tree_node_ancestors: list[CategoryTreeNodeAncestor]
     category_tree_node_level: int
 
 
 class CategorySuggestionResponse(EbayModel):
-    category_suggestions: List[CategorySuggestion]
+    category_suggestions: list[CategorySuggestion]
     category_tree_id: str
     category_tree_version: str
 

@@ -1,5 +1,5 @@
+from collections.abc import Generator
 from dataclasses import asdict, dataclass
-from typing import Generator
 
 from pydantic import ValidationError
 
@@ -17,7 +17,7 @@ from .api_clients.ebay import (
     EbayTaxonomyClientError,
 )
 from .api_clients.ebay import models as ebay_models
-from .marketplace_aspects import EbayMarketplaceAspects
+from .marketplace_aspects import EbayAspects
 
 
 @dataclass
@@ -27,54 +27,60 @@ class EbayAPI:
     commerce_api: EbayCommerceClient
     sku_generator: Generator[str, None, None]
 
-    def publish(self, item: Item[EbayMarketplaceAspects], token: str, *images: str):
+    def publish(self, item: Item[EbayAspects], token: str, *images: str):
+        sku = next(self.sku_generator)[:50]
+
         try:
             images_urls = self._load_images(*images)
-        except EbayCommerceClientError as e:
-            raise MarketplaceAPIError() from e
+            inventory_item = self._product_to_inventory_item(item, images_urls)
 
-        sku = next(self.sku_generator)[:50]
-        inventory_item = self._product_to_inventory_item(item, images_urls)
-
-        try:
             _, category_id, _ = self._search_category(
                 item.category, item.marketplace_aspects.marketplace
             )
+
             self.selling_api.create_or_replace_inventory_item(sku, inventory_item)
-        except (EbayTaxonomyClientError, EbaySellingClientError) as e:
-            self._publish_cleanup(token, sku)
+        except (EbayCommerceClientError, EbaySellingClientError) as e:
             raise MarketplaceAPIError() from e
 
-        offer = self._make_offer(
-            sku, category_id, item.currency, item.price, item.marketplace_aspects
-        )
+        offer_id = None
         try:
+            offer = self._make_offer(
+                sku, category_id, item.currency, item.price, item.marketplace_aspects
+            )
             offer_id = self.selling_api.create_offer(offer)
 
             self.selling_api.publish_offer(offer_id)
-        except (EbayTaxonomyClientError, EbaySellingClientError) as e:
+
+        except EbaySellingClientError as e:
             self._publish_cleanup(token, sku, offer_id)
 
             raise MarketplaceAPIError() from e
 
+    def _publish_cleanup(self, token: str, sku: str, offer_id: str | None = None):
+        try:
+            self.selling_api.delete_inventory_item(sku, token)
+            if offer_id:
+                self.selling_api.delete_offer(offer_id, token)
+        except EbaySellingClientError:
+            pass
+
     def get_product_aspects(
-        self, category_name: str, **marketplace_settings: dict
+        self, category_name: str, *, marketplace_id: str
     ) -> list[AspectType]:
-        marketplace_settings.get()
         try:
-            search_res = self._search_category(category_name)
-        except EbayTaxonomyClientError as e:
-            raise MarketplaceAPIError from e
+            search_res = self._search_category(category_name, marketplace_id)
 
-        if search_res is None:
-            raise CategoriesNotFoundError(category_name)
+            if search_res is None:
+                raise CategoriesNotFoundError(category_name)
 
-        try:
             tree_id, category_id, _ = search_res
             ebay_aspects = self.taxonomy_api.get_item_aspects(tree_id, category_id)
             return self._from_ebay_aspects(ebay_aspects)
+
         except EbayTaxonomyClientError as e:
             raise MarketplaceAPIError from e
+        except CategoriesNotFoundError:
+            raise
 
     def _load_images(self, token: str, *images: str):
         images_urls = []
@@ -89,7 +95,7 @@ class EbayAPI:
         category_id: str,
         currency: str,
         price: float,
-        marketplace_aspects: EbayMarketplaceAspects,
+        marketplace_aspects: EbayAspects,
     ):
         price = ebay_models.Price(currency=currency, value=price)
 
@@ -111,14 +117,6 @@ class EbayAPI:
             pricing_summary=ebay_models.PricingSummary(price=price),
             merchant_location_key=location_key,
         )
-
-    def _publish_cleanup(self, token: str, sku: str, offer_id: str | None = None):
-        try:
-            self.selling_api.delete_inventory_item(sku, token)
-            if offer_id:
-                self.selling_api.delete_offer(offer_id, token)
-        except EbaySellingClientError:
-            pass
 
     @classmethod
     def _from_ebay_aspects(
@@ -165,14 +163,11 @@ class EbayAPI:
 
     @staticmethod
     def _product_to_inventory_item(
-        item: Item[EbayMarketplaceAspects],
+        item: Item[EbayAspects],
         images_urls: list[str],
         *,
         is_shipping: bool = True,
     ) -> ebay_models.InventoryItem:
-        """
-        Convert a Item[EbayProduct, EbayMarketplaceAspects] to an eBay Sell API InventoryItem.
-        """
         availability = ebay_models.Availability(
             ship_to_location_availability=ebay_models.ShipToLocationAvailability(
                 quantity=item.quantity

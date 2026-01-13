@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from ..domain.dto import ProductCategoriesDTO, ProductDTO
 from ..domain.entities import ProductStructure
 from ..domain.ports import (
-    ProductCategoriesNotFoundError,
+    ProductCategoriesNotFound,
     SearchServiceError,
 )
 from .mapping import FromEntity
@@ -32,12 +32,13 @@ class SearchService:
     ) -> ProductDTO:
         try:
             marketplace_api = self.api_factory.get(marketplace)
-            aspects = marketplace_api.get_product_aspects(category, **(settings or {}))
+            aspects = marketplace_api.get_product_aspects(category, **settings)
 
             product = self.search.by_product_name(
                 product_name, ProductStructure(aspects), comment
             )
             return FromEntity.product_dto(product)
+
         except SearchEngineError as e:
             raise SearchServiceError() from e
 
@@ -51,12 +52,12 @@ class SearchService:
         try:
             category_predictor = self.predictors_factory.get(marketplace)
             product_name = self.search.product_name_by_barecode(barecodes[0])
-            categories = category_predictor.predict(product_name, **(settings or {}))
+            categories = category_predictor.predict(product_name, **settings)
 
             return ProductCategoriesDTO(product_name, categories)
 
         except CategoriesNotFoundError as e:
-            raise ProductCategoriesNotFoundError() from e
+            raise ProductCategoriesNotFound() from e
 
         except SearchEngineError as e:
             raise SearchServiceError() from e

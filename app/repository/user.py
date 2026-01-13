@@ -9,7 +9,7 @@ from .models import UserModel
 
 class UserRepository(BaseRepository):
     async def get_user_by_email(self, email: str) -> User | None:
-        cond = UserModel.email == email and UserModel.deleted == False
+        cond = UserModel.email == email and not UserModel.deleted
         q = select(UserModel).filter(cond)
 
         raw_user = (await self.session.execute(q)).scalars().one_or_none()
@@ -23,7 +23,7 @@ class UserRepository(BaseRepository):
         )
 
     async def get_user_by_uuid(self, uuid: uuid.UUID) -> User | None:
-        cond = UserModel.uuid == uuid and UserModel.deleted == False
+        cond = UserModel.uuid == uuid and not UserModel.deleted
         q = select(UserModel).filter(cond)
 
         raw_user = (await self.session.execute(q)).scalars().one_or_none()

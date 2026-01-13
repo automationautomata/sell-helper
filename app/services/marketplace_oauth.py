@@ -3,18 +3,17 @@ from dataclasses import dataclass
 
 from ..domain.dto import MarketplaceAccountDTO
 from ..domain.ports import (
+    InvalidToken,
     MarketplaceOAuthServiceError,
-    MarketplaceUnauthorisedError,
+    MarketplaceUnauthorised,
 )
 from .mapping import FromDTO
 from .ports import (
     IAccessTokenStorage,
     IJWTAuth,
     IMarketplaceOAuthFactory,
-    InvalidTokenError,
     IRefreshTokenStorage,
     IUserRepository,
-    JWTAuthError,
     OAuthParsingError,
     TokenNotFoundError,
     TokenStorageError,
@@ -34,19 +33,16 @@ class MarketplaceOAuthService:
     oauth_factory: IMarketplaceOAuthFactory
 
     def generate_token(self, user_uuid: uuid.UUID) -> str:
-        try:
-            jwt_token = self.jwt_auth.generate_token(OAuthPayload(user_uuid=user_uuid))
-            return jwt_token.token
-
-        except JWTAuthError as e:
-            raise MarketplaceOAuthServiceError() from e
+        jwt_token = self.jwt_auth.generate_token(OAuthPayload(user_uuid=user_uuid))
+        return jwt_token.token
 
     async def save_tokens(
         self, user_token: str, oauth_tokens: dict[str], marketplace: str
-    ) -> uuid.UUID | None:
+    ) -> uuid.UUID:
         try:
             payload = self.jwt_auth.verify_token(user_token, OAuthPayload)
-
+            if payload is None:
+                raise InvalidToken()
             oauth = self.oauth_factory.get(marketplace)
 
             tokens = oauth.parse(oauth_tokens)
@@ -54,8 +50,7 @@ class MarketplaceOAuthService:
             await self.refresh_tokens_storage.store(tokens.refresh_token)
 
             return payload.user_uuid
-        except InvalidTokenError:
-            return
+
         except (TokenStorageError, OAuthParsingError) as e:
             raise MarketplaceOAuthServiceError() from e
 
@@ -64,7 +59,8 @@ class MarketplaceOAuthService:
             entity = FromDTO.account(account)
             await self.access_tokens_storage.delete(entity)
             await self.refresh_tokens_storage.delete(entity)
+
+        except TokenNotFoundError as e:
+            raise MarketplaceUnauthorised() from e
         except TokenStorageError as e:
             raise MarketplaceOAuthServiceError() from e
-        except TokenNotFoundError as e:
-            raise MarketplaceUnauthorisedError() from e

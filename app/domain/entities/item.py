@@ -19,4 +19,4 @@ class Item[T: IMarketplaceAspects]:
     quantity: int
     category: str
     product_aspects: list[AspectValue]
-    marketplace_aspects: IMarketplaceAspects
+    marketplace_aspects: T

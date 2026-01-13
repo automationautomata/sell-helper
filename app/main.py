@@ -4,7 +4,7 @@ from . import setup
 
 config = setup.load_config()
 
-app = setup.app()
+app = setup.app(config)
 
 container = setup.container(config)
 

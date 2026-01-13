@@ -1,5 +1,6 @@
 import requests
 
+from ....data import OAuth2Settings
 from ..utils import request_exception_chain
 from .base import EbayRequestError, EbayUserClient
 from .models import EbayDomain, ImageResponse
@@ -12,9 +13,10 @@ class EbayCommerceClientError(EbayRequestError):
 class EbayCommerceClient(EbayUserClient):
     _api_endpoint = "/commerce/media/v1_beta"
 
-    def __init__(self, domain: EbayDomain):
+    def __init__(self, domain: EbayDomain, settings: OAuth2Settings):
         subdomain = ".sandbox" if "sandbox" in domain else ""
         self._url_base = f"https://apim{subdomain}.ebay.com{self._api_endpoint}"
+        self.settings = settings
 
     @request_exception_chain(default=EbayCommerceClientError)
     def upload_image(self, img_path: str, token: str) -> ImageResponse:

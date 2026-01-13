@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -16,12 +16,12 @@ class TokenResponse(BaseModel):
 
 class SearchCategoriesResponse(BaseModel):
     product_name: str
-    categories: List[str]
+    categories: list[str]
 
 
 class Aspects(BaseModel):
-    values: Dict[str, Any]
-    required: List[str]
+    values: dict[str, Any]
+    required: list[str]
 
 
 class Metadata(BaseModel):

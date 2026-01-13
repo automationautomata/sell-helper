@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, select
 
@@ -7,7 +7,6 @@ from ..services.ports import (
     AuthToken,
     RefreshTokenStorageError,
     TokenExpiredError,
-    TokenNotFoundError,
 )
 from .base import BaseRepository
 from .models import RefreshToken
@@ -15,7 +14,7 @@ from .models import RefreshToken
 
 class RefreshTokenRepository(BaseRepository):
     async def store(self, token: AuthToken, account: MarketplaceAccount):
-        expires_at = datetime.now(tz=timezone.utc) + timedelta(seconds=token.ttl)
+        expires_at = datetime.now(tz=UTC) + timedelta(seconds=token.ttl)
 
         row = RefreshToken(
             user_uuid=account.user_uuid,
@@ -49,7 +48,7 @@ class RefreshTokenRepository(BaseRepository):
         if not row:
             return
 
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         ttl = int((row.expires_at - now).total_seconds())
         if ttl < 0:
             raise TokenExpiredError("token for user")

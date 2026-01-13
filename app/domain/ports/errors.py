@@ -1,24 +1,20 @@
-class UserAccountNotAuthorizedError(Exception):
+class Base(Exception):
     pass
 
 
-class AuthError(Exception):
+class AuthError(Base):
     pass
 
 
-class UserAuthFailedError(AuthError):
+class InvalidUserToken(AuthError):
     pass
 
 
-class CannotCreateUserError(AuthError):
+class RegistrationError(Base):
     pass
 
 
-class UserAlreadyExistsError(AuthError):
-    pass
-
-
-class RegistrationError(Exception):
+class CannotCreateUser(RegistrationError):
     pass
 
 
@@ -26,33 +22,49 @@ class UserAlreadyExists(RegistrationError):
     pass
 
 
-class SearchServiceError(Exception):
+class SearchServiceError(Base):
     pass
 
 
-class ProductCategoriesNotFoundError(SearchServiceError):
+class ProductCategoriesNotFound(SearchServiceError):
     pass
 
 
-class SellingError(Exception):
+class SellingServiceError(Base):
     pass
 
 
-class UserUnauthorisedError(SellingError):
+class InvalidItemStructure(SellingServiceError):
     pass
 
 
-class UserAuthorizationFailed(SellingError):
+class InvalidMarketplaceAspects(InvalidItemStructure):
     pass
 
 
-class CategoryNotFound(SellingError):
+class InvalidProductAspects(InvalidItemStructure):
     pass
 
 
-class MarketplaceOAuthServiceError(Exception):
+class MarketplaceAuthorizationFailed(SellingServiceError):
     pass
 
 
-class MarketplaceUnauthorisedError(MarketplaceOAuthServiceError):
+class UserUnauthorisedInMarketplace(MarketplaceAuthorizationFailed):
+    pass
+
+
+class InvalidCategory(SellingServiceError):
+    pass
+
+
+class MarketplaceOAuthServiceError(Base):
+    pass
+
+
+class InvalidToken(MarketplaceOAuthServiceError):
+    pass
+
+
+class MarketplaceUnauthorised(MarketplaceOAuthServiceError):
     pass

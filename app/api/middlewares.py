@@ -1,9 +1,9 @@
 import uuid
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from fastapi import HTTPException, Request, Response, status
 
-from ..domain.ports import IAuthService
+from ..domain.ports import AuthError, IAuthService, InvalidUserToken
 from ..logger import logger
 
 
@@ -22,7 +22,7 @@ class authentication:
         auth_service: IAuthService = await container.get(IAuthService)
 
         path = request.url.path
-        if not any(map(path.startswith, self._prefixes)):
+        if not any(path.startswith(p) for p in self._prefixes):
             return await call_next(request)
 
         auth_header = request.headers.get("Authorization")
@@ -34,19 +34,19 @@ class authentication:
 
         try:
             user = await auth_service.validate(auth_header.removeprefix("Bearer "))
-        except Exception as e:
+            request.state.user_uuid = user.uuid
+
+            return await call_next(request)
+
+        except AuthError as e:
             logger.exception(f"Validation failed: {e}", exc_info=True)
 
             raise HTTPException(
                 detail="Validation failed",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        if user is None:
+        except InvalidUserToken:
             raise HTTPException(
-                detail="Authorization header missing or invalid",
+                detail="Authorization token missing or invalid",
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
-        request.state.user_uuid = user.uuid
-
-        return await call_next(request)

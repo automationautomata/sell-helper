@@ -45,7 +45,7 @@ class IJWTAuth[T](Protocol):
     def generate_token(self, payload: T) -> AuthToken:
         pass
 
-    def verify_token(self, token: str, data_type: type[T]) -> T:
+    def verify_token(self, token: str, data_type: type[T]) -> T | None:
         pass
 
 
