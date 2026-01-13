@@ -18,7 +18,7 @@ class EbayCategoriesNotFoundError(EbayRequestError):
     pass
 
 
-@auth_retry()
+@auth_retry
 class EbayTaxonomyClient(EbayApplicationClient):
     _api_endpoint = "/commerce/taxonomy/v1"
 

@@ -4,15 +4,14 @@ from uuid import UUID
 from ..domain.dto import Token
 from ..domain.ports import (
     AuthError,
-    CannotCreateUserError,
-    UserAuthFailedError,
+    CannotCreateUser,
+    InvalidUserToken,
 )
-from ..infrastructure.jwt_auth import InvalidTokenError
 from .ports import (
     IHasher,
     IJWTAuth,
     IUserRepository,
-    UserAlreadyExistsError,
+    UserAlreadyExists,
     UserRepositoryError,
 )
 
@@ -35,11 +34,11 @@ class AuthService:
             raise AuthError() from e
 
         if user is None:
-            raise UserAuthFailedError()
+            raise InvalidUserToken()
 
         check_password = self.hasher.verify(password, user.password_hash)
-        if user.email == email and check_password:
-            raise UserAuthFailedError()
+        if not (user.email == email and check_password):
+            raise InvalidUserToken()
 
         return self._create_access_token(email)
 
@@ -48,26 +47,27 @@ class AuthService:
             user = await self.user_repo.add_user(email, self.hasher.hash(password))
             return self._create_access_token(user.uuid)
 
-        except UserAlreadyExistsError:
-            raise CannotCreateUserError()
+        except UserAlreadyExists as e:
+            raise CannotCreateUser() from e
         except UserRepositoryError as e:
             raise AuthError() from e
 
     def _create_access_token(self, uuid: UUID) -> Token:
         payload = TokenPayload(uuid=uuid)
         jwt_token = self.jwt_auth.generate_token(payload)
-        return Token(
-            token=jwt_token.token, ttl_seconds=int(jwt_token.expires_at.timestamp())
-        )
+        return Token(token=jwt_token.token, ttl_seconds=jwt_token.ttl)
 
     async def validate(self, token: str) -> UUID:
+        payload = self.jwt_auth.verify_token(token, TokenPayload)
+        if payload is None:
+            raise InvalidUserToken()
+
         try:
-            payload = self.jwt_auth.verify_token(token, TokenPayload)
-        except InvalidTokenError:
-            return
-        user = await self.user_repo.get_user_by_uuid(payload.uuid)
+            user = await self.user_repo.get_user_by_uuid(payload.uuid)
+        except UserRepositoryError as e:
+            raise AuthError() from e
 
         if user is None:
-            raise UserAuthFailedError()
+            raise InvalidUserToken()
 
         return user.uuid

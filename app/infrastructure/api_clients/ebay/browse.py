@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import requests
 
@@ -10,7 +10,7 @@ class EbayBrowseClientError(EbayRequestError):
     pass
 
 
-@auth_retry()
+@auth_retry
 class EbayBrowseClient(EbayApplicationClient):
     _api_endpoint = "/buy/browse/v1"
 
@@ -18,8 +18,8 @@ class EbayBrowseClient(EbayApplicationClient):
     def search_items(
         self,
         name: str,
-        categories_ids: Optional[list[str]] = None,
-        fieldgroups: Optional[list[str]] = None,
+        categories_ids: list[str] | None = None,
+        fieldgroups: list[str] | None = None,
     ) -> Any:
         params = {"q": name}
         if categories_ids:

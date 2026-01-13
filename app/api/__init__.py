@@ -1,5 +1,6 @@
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Callable, Self
+from typing import Any, Self
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from starlette.middleware.sessions import SessionMiddleware

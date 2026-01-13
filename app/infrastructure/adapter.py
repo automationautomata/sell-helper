@@ -31,18 +31,17 @@ class ProductAdapter[M: IMetadata]:
 
     metadata_type: type[M]
 
-    @classmethod
     def to_product(
-        cls,
+        self,
         raw_data: dict[str],
         product_structure: ProductStructure,
     ) -> Product[M]:
         try:
             aspect_values = product_structure.validate(
-                raw_data.get(cls._ASPECTS_FIELD_NAME, {})
+                raw_data.get(self._ASPECTS_FIELD_NAME, {})
             )
-            metadata = TypeAdapter(M).validate_python(
-                raw_data.get(cls._METADATA_FIELD_NAME, {})
+            metadata = TypeAdapter(self.metadata_type).validate_python(
+                raw_data.get(self._METADATA_FIELD_NAME, {})
             )
             return Product(metadata=metadata, aspects=aspect_values)
         except AspectsValidationError as e:
@@ -50,26 +49,25 @@ class ProductAdapter[M: IMetadata]:
         except ValidationError as e:
             raise InvalidMetadataError() from e
 
-    @classmethod
     def to_schema(
-        cls,
+        self,
         aspects: list[AspectField],
         allow_additional_aspects: bool = False,
     ) -> dict[str]:
-        aspects_schema = cls._build_aspects_schema(
+        aspects_schema = self._build_aspects_schema(
             aspects,
             allow_additional_properties=allow_additional_aspects,
         )
 
-        metadata_schema, metadata_defs = cls._build_metadata_schema(M)
+        metadata_schema, metadata_defs = self._build_metadata_schema(self.metadata_type)
 
-        aspecs_def_name = cls._ASPECTS_FIELD_NAME.capitalize()
-        metadata_def_name = cls._METADATA_FIELD_NAME.capitalize()
+        aspecs_def_name = self._ASPECTS_FIELD_NAME.capitalize()
+        metadata_def_name = self._METADATA_FIELD_NAME.capitalize()
         return {
             "type": "object",
             "properties": {
-                cls._ASPECTS_FIELD_NAME: {"$ref": f"#/$defs/{aspecs_def_name}"},
-                cls._METADATA_FIELD_NAME: {"$ref": f"#/$defs/{metadata_def_name}"},
+                self._ASPECTS_FIELD_NAME: {"$ref": f"#/$defs/{aspecs_def_name}"},
+                self._METADATA_FIELD_NAME: {"$ref": f"#/$defs/{metadata_def_name}"},
             },
             "required": ["aspects", "meatadata"],
             "additionalProperties": False,

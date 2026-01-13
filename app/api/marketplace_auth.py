@@ -9,7 +9,7 @@ from ..domain.dto import MarketplaceAccountDTO
 from ..domain.ports import (
     IMarketplaceOAuthService,
     MarketplaceOAuthServiceError,
-    MarketplaceUnauthorisedError,
+    MarketplaceUnauthorised,
 )
 from ..logger import logger
 from .dependencies import (
@@ -40,7 +40,8 @@ async def login(
         return await oauth.authorize_redirect(redirect_uri, state=token)
     except MarketplaceOAuthServiceError as e:
         logger.exception(
-            f"Faiiled to generate token in {marketplace} marketplace for user {user_uuid}: {e}",
+            f"Failed to generate token in {marketplace} marketplace "
+            f"for user {user_uuid}: {e}",
             exc_info=True,
         )
         raise HTTPException(
@@ -58,14 +59,17 @@ async def logout(
     try:
         await service.logout(MarketplaceAccountDTO(user_uuid, marketplace))
         return MarketplaceLogoutResponse(status="success")
+
+    except MarketplaceUnauthorised:
+        return MarketplaceLogoutResponse(status="user already logged out")
+
     except MarketplaceOAuthServiceError as e:
         logger.exception(
-            f"Faiiled to generate token in {marketplace} marketplace for user {user_uuid}: {e}",
+            f"Failed to generate token in {marketplace} marketplace "
+            f"for user {user_uuid}: {e}",
             exc_info=True,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Authentication in {marketplace} failed",
         )
-    except MarketplaceUnauthorisedError as e:
-        return MarketplaceLogoutResponse(status="user already logged out")

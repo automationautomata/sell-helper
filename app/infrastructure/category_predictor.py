@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from ..services.ports import CategoriesNotFoundError, CategoryPredictorError
 from .api_clients.ebay import (
@@ -14,7 +13,7 @@ class EbayCategoryPredictor:
     taxonomy_api: EbayTaxonomyClient
 
     def predict(
-        self, product_name: str, *, marketplace: Optional[str] = None
+        self, product_name: str, *, marketplace: str | None = None
     ) -> list[str]:
         if marketplace is None:
             raise ValueError("Marketplace must be specified")

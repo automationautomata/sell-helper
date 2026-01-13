@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from pydantic import TypeAdapter, ValidationError
 
-from ..services.ports import AuthToken, InvalidPayloadTypeError, InvalidTokenError
+from ..services.ports import AuthToken, InvalidPayloadTypeError
 
 
 @dataclass
@@ -16,7 +16,7 @@ class JWTAuth[T]:
     def generate_token(self, data: T) -> AuthToken:
         delta = timedelta(minutes=self.jwt_ttl_minutes)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + delta
         payload = {
             "iat": now,
@@ -25,17 +25,17 @@ class JWTAuth[T]:
         }
 
         token = jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_algorithm)
-        return AuthToken(token=token, expires_at=delta.total_seconds())
+        return AuthToken(token=token, ttl=delta.total_seconds())
 
-    def verify_token(self, token: str, data_type: type[T]) -> T:
+    def verify_token(self, token: str, data_type: type[T]) -> T | None:
         try:
             payload = jwt.decode(
                 token, self.jwt_secret, algorithms=[self.jwt_algorithm]
             )
             return TypeAdapter(data_type).validate_python(payload["data"])
 
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
-            raise InvalidTokenError() from e
+        except (jwt.ExpiredSignatureError, jwt.InvalidToken):
+            return
 
         except ValidationError as e:
             raise InvalidPayloadTypeError() from e

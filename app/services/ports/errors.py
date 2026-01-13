@@ -6,10 +6,6 @@ class JWTAuthError(Exception):
     pass
 
 
-class InvalidTokenError(JWTAuthError):
-    pass
-
-
 class InvalidPayloadTypeError(JWTAuthError):
     pass
 
@@ -18,7 +14,7 @@ class MarketplaceAPIError(Exception):
     pass
 
 
-class CategoryNotFoundError(MarketplaceAPIError):
+class CategoryNotFound(MarketplaceAPIError):
     pass
 
 
@@ -38,7 +34,7 @@ class UserRepositoryError(Exception):
     pass
 
 
-class UserAlreadyExistsError(UserRepositoryError):
+class UserAlreadyExists(UserRepositoryError):
     pass
 
 

@@ -1,8 +1,8 @@
 import uuid
+from collections.abc import AsyncIterable
 from itertools import count
-from typing import AsyncIterable
+from typing import Annotated
 
-from authlib.integrations.httpx_client.oauth2_client import AsyncOAuth2Client
 from authlib.integrations.starlette_client import OAuth, StarletteOAuth2App
 from dishka import (
     FromComponent,
@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from .api.dependencies import OAuth2ClientMapping
 from .config import DBConfig, EbayConfig, RedisConfig
 from .data import Marketplace, OAuth2Settings
-from .infrastructure.providers import SKUGenerator
+from .infrastructure.providers import EbayClientSettings, SKUGenerator
 
 
 class DBProvider(Provider):
@@ -58,25 +58,22 @@ class PerplexityClientProvider(Provider):
         return PerplexityClient(api_key=perplexity_token)
 
 
-class EbayProvider(Provider):
-    ebay_config = from_context(EbayConfig, scope=Scope.APP)
-
-    @provide(scope=Scope.APP)
-    def sku_generator(self) -> SKUGenerator:
-        return (uuid.uuid4().hex.upper() for _ in count())
-
-
 class OAuthProvider(Provider):
     @provide(scope=Scope.APP)
     def oauth(self) -> OAuth:
         return OAuth()
 
 
-class EbayOAuth2Provider:
+class EbayProvider(Provider):
     component = "ebay"
+    ebay_config = from_context(EbayConfig, scope=Scope.APP)
 
     @provide(scope=Scope.APP)
-    def oauth_grants(self, ebay_config: EbayConfig) -> OAuth2Settings:
+    def sku_generator(self) -> SKUGenerator:
+        return (uuid.uuid4().hex.upper() for _ in count())
+
+    @provide(scope=Scope.APP)
+    def oauth2_settings(self, ebay_config: EbayConfig) -> OAuth2Settings:
         scopes = [
             f"https://{ebay_config.domain}/oauth/api_scope",
             f"https://{ebay_config.domain}/oauth/api_scope/sell.account",
@@ -92,8 +89,14 @@ class EbayOAuth2Provider:
         )
 
     @provide(scope=Scope.APP)
+    def ebay_clients_settings(
+        self, ebay_config: EbayConfig, settings: OAuth2Settings
+    ) -> EbayClientSettings:
+        return EbayClientSettings(ebay_config.domain, settings)
+
+    @provide(scope=Scope.APP)
     def starlette_oauth(
-        self, oauth: OAuth, settings: OAuth2Settings
+        self, settings: OAuth2Settings, oauth: Annotated[OAuth, FromComponent("")]
     ) -> StarletteOAuth2App:
         return oauth.register(
             name="ebay",
@@ -101,14 +104,10 @@ class EbayOAuth2Provider:
             token_endpoint_auth_method="client_secret_basic",
         )
 
-    @provide(scope=Scope.APP)
-    def oauth2_client(self, starlette_oauth: StarletteOAuth2App) -> AsyncOAuth2Client:
-        return starlette_oauth._get_oauth_client()
-
 
 class MarketplaceMappingsProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def oauth2_factory(
-        self, ebay_oauth: StarletteOAuth2App = FromComponent("ebay_oauth")
+        self, ebay_oauth: Annotated[StarletteOAuth2App, FromComponent("ebay")]
     ) -> OAuth2ClientMapping:
         return {Marketplace.EBAY: ebay_oauth}

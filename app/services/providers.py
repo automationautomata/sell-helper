@@ -5,6 +5,7 @@ from dishka import FromComponent, Provider, Scope, from_context, provide
 from ..domain.ports import (
     IAuthService,
     IMarketplaceOAuthService,
+    IRegistrationService,
     ISearchService,
     ISellingService,
 )
@@ -22,11 +23,19 @@ class SellingServiceSettings:
 
 class ServicesProvider(Provider):
     selling_settings = from_context(SellingServiceSettings, scope=Scope.APP)
-    auth_service = provide(AuthService, provides=IAuthService, scope=Scope.REQUEST)
 
     search_service = provide(
         SearchService, provides=ISearchService, scope=Scope.REQUEST
     )
+    auth_service = provide(AuthService, scope=Scope.REQUEST)
+
+    @provide(scope=Scope.REQUEST)
+    def auth_service_iface(self, auth_service: AuthService) -> IAuthService:
+        return auth_service
+
+    @provide(scope=Scope.REQUEST)
+    def reg_service_iface(self, auth_service: AuthService) -> IRegistrationService:
+        return auth_service
 
     @provide(scope=Scope.REQUEST)
     def marketplace_auth(

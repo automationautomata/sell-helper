@@ -47,7 +47,7 @@ class ExternalServicesConfig(YAMLConfig):
 
 
 class Tokens(EnvConfig):
-    barcode_searcher_token: str
+    barcode_search_token: str
     perplexity_token: str
 
 

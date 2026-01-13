@@ -52,7 +52,7 @@ class IMarketplaceOAuthService(Protocol):
 
     async def save_tokens(
         self, user_token: str, oauth_tokens: dict[str], marketplace: str
-    ) -> uuid.UUID | None:
+    ) -> uuid.UUID:
         pass
 
     async def logout(self, account: dto.MarketplaceAccountDTO):

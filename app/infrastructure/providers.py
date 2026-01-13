@@ -1,7 +1,9 @@
+from collections.abc import Generator
 from dataclasses import asdict, dataclass
-from typing import Generator
+from typing import Annotated
 
 from dishka import (
+    FromComponent,
     Provider,
     Scope,
     from_context,
@@ -72,6 +74,7 @@ class OAuthStateAuthProvider(Provider):
 @dataclass
 class EbayClientSettings:
     domain: str
+    oauth_settings: OAuth2Settings
 
 
 @dataclass
@@ -86,17 +89,15 @@ SKUGenerator = Generator[str, None, None]
 
 
 class EbayInfrastructureProvider(Provider):
-    ebay_settings = from_context(EbayClientSettings, scope=Scope.APP)
+    component = "ebay"
 
-    @provide(scope=Scope.APP)
-    def ebay_clients(
-        self, client_settings: EbayClientSettings, oauth_settings: OAuth2Settings
-    ) -> EbayClients:
+    @provide(scope=Scope.REQUEST)
+    def ebay_clients(self, settings: EbayClientSettings) -> EbayClients:
         return EbayClients(
-            ebay_api.EbayTaxonomyClient(client_settings.domain, oauth_settings),
-            ebay_api.EbaySellingClient(client_settings.domain, oauth_settings),
-            ebay_api.EbayCommerceClient(client_settings.domain, oauth_settings),
-            ebay_api.EbayUserClient(client_settings.domain, oauth_settings),
+            ebay_api.EbayTaxonomyClient(settings.domain, settings.oauth_settings),
+            ebay_api.EbaySellingClient(settings.domain, settings.oauth_settings),
+            ebay_api.EbayCommerceClient(settings.domain, settings.oauth_settings),
+            ebay_api.EbayUserClient(settings.domain, settings.oauth_settings),
         )
 
     @provide(scope=Scope.REQUEST)
@@ -117,13 +118,13 @@ class EbayInfrastructureProvider(Provider):
 class FactoriesProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def merketplace_api_factory(
-        self, ebay_api: EbayAPI
+        self, ebay_api: Annotated[EbayAPI, FromComponent("ebay")]
     ) -> ports.IMarketplaceAPIFactory:
         return InfraFactory[ports.IMarketplaceAPI]({Marketplace.EBAY: ebay_api})
 
     @provide(scope=Scope.REQUEST)
     def category_predictors_factory(
-        self, ebay_predictor: EbayCategoryPredictor
+        self, ebay_predictor: Annotated[EbayCategoryPredictor, FromComponent("ebay")]
     ) -> ports.ICategoryPredictorFactory:
         return InfraFactory[ports.ICategoryPredictor](
             {Marketplace.EBAY: ebay_predictor}
