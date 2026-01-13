@@ -1,107 +1,114 @@
-from dataclasses import dataclass
-from typing import AsyncIterable, Dict, Type
+import uuid
+from itertools import count
+from typing import AsyncIterable
 
+from authlib.integrations.httpx_client.oauth2_client import AsyncOAuth2Client
+from authlib.integrations.starlette_client import OAuth, StarletteOAuth2App
 from dishka import (
     FromComponent,
     Provider,
     Scope,
-    alias,
     from_context,
     provide,
 )
 from perplexity import Perplexity as PerplexityClient
-from shared.ebay_api.commerce import EbayCommerceClient
-from shared.ebay_api.selling import EbaySellingClient
-from shared.ebay_api.taxonomy import EbayTaxonomyClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from .api.dependencies import (
-    ISearchServicesFactory,
-    ISellingServicesFactory,
-)
-from .api.models.common import Marketplace
-from .config import EbayConfig
-from .core.domain.entities.ebay.item import EbayMarketplaceAspects
-from .core.domain.entities.ebay.question import EbayMetadata
-from .core.domain.entities.item import MarketplaceAspects
-from .core.domain.entities.question import Metadata
-from .core.domain.ports import ISearchService, ISellingService
-from .core.infrastructure.marketplace import EbayClients
-from .core.infrastructure.providers import PerplexitySettings
+from .api.dependencies import OAuth2ClientMapping
+from .config import DBConfig, EbayConfig, RedisConfig
+from .data import Marketplace, OAuth2Settings
+from .infrastructure.providers import SKUGenerator
 
 
 class DBProvider(Provider):
-    def __init__(self, async_session_factory: AsyncSession, scope=None, component=None):
-        super().__init__(scope, component)
-        self._async_session_factory = async_session_factory
+    db_config = from_context(DBConfig, scope=Scope.APP)
 
     @provide(scope=Scope.APP)
-    async def session(self) -> AsyncIterable[AsyncSession]:
-        async with self._async_session_factory() as session:
+    def get_session_maker(
+        self, db_config: DBConfig
+    ) -> async_sessionmaker[AsyncSession]:
+        engine = create_async_engine(db_config.get_url())
+        return async_sessionmaker(engine)
+
+    @provide(scope=Scope.REQUEST)
+    async def get_session(
+        self, session_maker: async_sessionmaker[AsyncSession]
+    ) -> AsyncIterable[AsyncSession]:
+        async with session_maker() as session:
             yield session
 
 
+class RedisProvider(Provider):
+    redis_config = from_context(RedisConfig, scope=Scope.APP)
+
+    @provide(scope=Scope.REQUEST)
+    def redis(self, redis_config: RedisConfig) -> Redis:
+        return Redis.from_url(redis_config.get_url())
+
+
+PerplexityToken = str
+
+
 class PerplexityClientProvider(Provider):
+    perplexity_token = from_context(PerplexityToken, scope=Scope.APP)
+
     @provide(scope=Scope.APP)
-    def perplexity_client(self) -> PerplexityClient:
-        return PerplexityClient()
+    def perplexity_client(self, perplexity_token: PerplexityToken) -> PerplexityClient:
+        return PerplexityClient(api_key=perplexity_token)
+
 
 class EbayProvider(Provider):
-    component = "ebay"
     ebay_config = from_context(EbayConfig, scope=Scope.APP)
-    perplexity_settings = from_context(PerplexitySettings, scope=Scope.APP)
 
     @provide(scope=Scope.APP)
-    def ebay_clients(self, ebay_config: EbayConfig) -> EbayClients:
-        return EbayClients(
-            selling_client=EbaySellingClient(ebay_config.domain),
-            taxonomy_client=EbayTaxonomyClient(ebay_config.domain),
-            commerce_client=EbayCommerceClient(ebay_config.domain),
+    def sku_generator(self) -> SKUGenerator:
+        return (uuid.uuid4().hex.upper() for _ in count())
+
+
+class OAuthProvider(Provider):
+    @provide(scope=Scope.APP)
+    def oauth(self) -> OAuth:
+        return OAuth()
+
+
+class EbayOAuth2Provider:
+    component = "ebay"
+
+    @provide(scope=Scope.APP)
+    def oauth_grants(self, ebay_config: EbayConfig) -> OAuth2Settings:
+        scopes = [
+            f"https://{ebay_config.domain}/oauth/api_scope",
+            f"https://{ebay_config.domain}/oauth/api_scope/sell.account",
+            f"https://{ebay_config.domain}/oauth/api_scope/sell.inventory",
+        ]
+        return OAuth2Settings(
+            client_id=ebay_config.appid,
+            client_secret=ebay_config.certid,
+            redirect_uri=ebay_config.redirect_uri,
+            authorize_url=f"https://{ebay_config.domain}/oauth2/authorize",
+            access_token_url=f"https://{ebay_config.domain}/identity/v1/oauth2/token",
+            scope=" ".join(scopes),
         )
-    
 
     @provide(scope=Scope.APP)
-    def metadata_type(self) -> Type[Metadata]:
-        return EbayMetadata
+    def starlette_oauth(
+        self, oauth: OAuth, settings: OAuth2Settings
+    ) -> StarletteOAuth2App:
+        return oauth.register(
+            name="ebay",
+            **settings,
+            token_endpoint_auth_method="client_secret_basic",
+        )
 
     @provide(scope=Scope.APP)
-    def marketplace_aspects_type(self) -> Type[MarketplaceAspects]:
-        return EbayMarketplaceAspects
-    
-    
-class SellingServicesFactory:
-    def __init__(self, mapping: Dict[Marketplace, ISellingService]):
-        self._mapping = mapping
-
-    def get(self, marketplace: str) -> ISellingService:
-        if marketplace not in self._mapping:
-            raise ValueError(f"Invalid marketplace name {marketplace}")
-        return self._mapping[marketplace]
+    def oauth2_client(self, starlette_oauth: StarletteOAuth2App) -> AsyncOAuth2Client:
+        return starlette_oauth._get_oauth_client()
 
 
-class SearchServicesFactory:
-    def __init__(self, mapping: Dict[Marketplace, ISearchService]):
-        self._mapping = mapping
-
-    def get(self, marketplace: str) -> ISearchService:
-        if marketplace not in self._mapping:
-            raise ValueError(f"Invalid marketplace name {marketplace}")
-        return self._mapping[marketplace]
-
-
-class ServicesFactoriesProvider(Provider):
-    ebay_search = alias(ISearchService, provides=ISearchService, component="ebay")
-
-    ebay_selling = alias(ISellingService, provides=ISellingService, component="ebay")
-
+class MarketplaceMappingsProvider(Provider):
     @provide(scope=Scope.REQUEST)
-    def selling_services_factory(
-        self, ebay_selling: ISellingService = FromComponent("ebay")
-    ) -> ISellingServicesFactory:
-        return SellingServicesFactory({Marketplace.EBAY: ebay_selling})
-
-    @provide(scope=Scope.REQUEST)
-    def search_services_factory(
-        self, ebay_search: ISearchService = FromComponent("ebay")
-    ) -> ISearchServicesFactory:
-        return SearchServicesFactory({Marketplace.EBAY: ebay_search})
+    def oauth2_factory(
+        self, ebay_oauth: StarletteOAuth2App = FromComponent("ebay_oauth")
+    ) -> OAuth2ClientMapping:
+        return {Marketplace.EBAY: ebay_oauth}

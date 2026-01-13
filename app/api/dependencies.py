@@ -1,19 +1,11 @@
-from typing import Protocol
+from typing import TypeVar
 
-from ..core.domain.ports import IMarketplaceAuthService, ISearchService, ISellingService
-from .models.common import Marketplace
+from authlib.integrations.starlette_client import StarletteOAuth2App
 
+from ..data import Marketplace
 
-class ISearchServicesFactory(Protocol):
-    def get(self, marketplace: Marketplace) -> ISearchService:
-        pass
+T = TypeVar("T")
 
+MarketplaceMapping = dict[Marketplace, T]
 
-class ISellingServicesFactory(Protocol):
-    def get(self, marketplace: Marketplace) -> ISellingService:
-        pass
-
-
-class IMarketplaceAuthServicesFactory(Protocol):
-    def get(self, marketplace: Marketplace) -> IMarketplaceAuthService:
-        pass
+OAuth2ClientMapping = MarketplaceMapping[StarletteOAuth2App]

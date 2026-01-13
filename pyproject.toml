@@ -17,6 +17,11 @@ addopts = [
 
 [tool.poetry]
 package-mode = false
+packages = [
+    { include = "app" },
+    { include = "tasks" },
+    { include = ".api_clients" }
+]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^9.0.1"
@@ -24,6 +29,11 @@ websocket-client = "^1.9.0"
 pytest-mock = "^3.15.1"
 pytest-asyncio = "^1.3.0"
 debugpy = "^1.8.17"
+
+
+[tool.poetry.group.tasks.dependencies]
+celery = {extras = ["redis"], version = "^5.6.0"}
+psycopg2 = "^2.9.11"
 
 [tool.poetry.dependencies]
 sqlalchemy = "^2.0.44"
@@ -43,6 +53,12 @@ aiofiles = "^25.1.0"
 python-multipart = "^0.0.20"
 aiosqlite = {version = "^0.21.0", extras = ["sqlalchemy"]}
 uvicorn = "^0.38.0"
+redis = "<6.5.0"
+asyncpg = "^0.31.0"
+authlib = "^1.6.6"
+itsdangerous = "^2.2.0"
+pydantic-settings = "^2.12.0"
+alembic = "^1.18.0"
 
 [tool.ruff]
 target-version = "py312"

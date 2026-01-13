@@ -1,4 +1,5 @@
 import pytest
+
 from app.core.domain.question import Answer
 from app.core.infrastructure.adapter import (
     InvalidMetadata,
@@ -33,6 +34,7 @@ def service_with_mocks(mocker):
 
 # -------------------- TEST: product() -------------------- #
 
+
 def test_product_success(service_with_mocks):
     service, search, marketplace_api, adapter = service_with_mocks
 
@@ -40,7 +42,7 @@ def test_product_success(service_with_mocks):
     adapter.to_schema.return_value = {"type": "object"}
     search.by_product_name.return_value = {"foo": "bar"}
 
-    expected_answer = Answer(metadata="meta", product_data="data")
+    expected_answer = Answer(metadata="meta", product="data")
     adapter.to_answer.return_value = expected_answer
 
     result = service.product("Phone", "Electronics", "Nice model")
@@ -90,6 +92,7 @@ def test_product_invalid_metadata_error(service_with_mocks):
 
 
 # -------------------- TEST: product_categories() -------------------- #
+
 
 def test_product_categories_success(service_with_mocks):
     service, search, _, _ = service_with_mocks
