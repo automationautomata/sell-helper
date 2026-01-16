@@ -12,7 +12,7 @@ class UserRepository(BaseRepository):
         cond = UserModel.email == email and not UserModel.deleted
         q = select(UserModel).filter(cond)
 
-        raw_user = (await self.session.execute(q)).scalars().one_or_none()
+        raw_user = (await self.session.execute(q)).scalar_one_or_none()
         if raw_user is None:
             return
 
@@ -26,7 +26,7 @@ class UserRepository(BaseRepository):
         cond = UserModel.uuid == uuid and not UserModel.deleted
         q = select(UserModel).filter(cond)
 
-        raw_user = (await self.session.execute(q)).scalars().one_or_none()
+        raw_user = (await self.session.execute(q)).scalar_one_or_none()
         if raw_user is None:
             return
 

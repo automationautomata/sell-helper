@@ -62,8 +62,8 @@ def container(config: Config) -> AsyncContainer:
 
     ext_services = config.external_services
     context = {
-        DBConfig: config.db.get_url(),
-        RedisConfig: config.redis.get_url(),
+        DBConfig: config.db,
+        RedisConfig: config.redis,
         EbayConfig: ext_services.ebay,
         PerplexityToken: config.tokens.perplexity_token,
         SearchEngineSettings: SearchEngineSettings(
