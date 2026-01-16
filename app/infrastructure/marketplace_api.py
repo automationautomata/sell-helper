@@ -3,12 +3,15 @@ from dataclasses import asdict, dataclass
 
 from pydantic import ValidationError
 
-from ..domain.entities import AspectField, AspectType, Item
+from ..domain.entities import AccountSettings, AspectField, AspectType, Item
 from ..services.ports import (
+    AccountSettingsNotFound,
     CategoriesNotFoundError,
     MarketplaceAPIError,
 )
 from .api_clients.ebay import (
+    EbayAccountClient,
+    EbayAccountClientError,
     EbayCommerceClient,
     EbayCommerceClientError,
     EbaySellingClient,
@@ -17,7 +20,7 @@ from .api_clients.ebay import (
     EbayTaxonomyClientError,
 )
 from .api_clients.ebay import models as ebay_models
-from .marketplace_aspects import EbayAspects
+from .marketplace_aspects import EbayAspects, EbayPolicies
 
 
 @dataclass
@@ -25,6 +28,7 @@ class EbayAPI:
     selling_api: EbaySellingClient
     taxonomy_api: EbayTaxonomyClient
     commerce_api: EbayCommerceClient
+    account_api: EbayAccountClient
     sku_generator: Generator[str, None, None]
 
     def publish(self, item: Item[EbayAspects], token: str, *images: str):
@@ -32,7 +36,7 @@ class EbayAPI:
 
         try:
             images_urls = self._load_images(*images)
-            inventory_item = self._product_to_inventory_item(item, images_urls)
+            inventory_item = self._to_inventory_item(item, images_urls)
 
             _, category_id, _ = self._search_category(
                 item.category, item.marketplace_aspects.marketplace
@@ -40,21 +44,42 @@ class EbayAPI:
 
             self.selling_api.create_or_replace_inventory_item(sku, inventory_item)
         except (EbayCommerceClientError, EbaySellingClientError) as e:
+            self._publish_cleanup(token, sku)
             raise MarketplaceAPIError() from e
 
         offer_id = None
+        marketplace_aspects = item.marketplace_aspects
         try:
-            offer = self._make_offer(
-                sku, category_id, item.currency, item.price, item.marketplace_aspects
+            res = self._get_policeis_ids(marketplace_aspects.policies)
+            if res is not None:
+                raise AccountSettingsNotFound()
+            fulfillment_id, payment_id, return_id = res
+
+            location_key = self._get_location_key(marketplace_aspects.location)
+            if res is not None:
+                raise AccountSettingsNotFound()
+
+            offer = self._create_offer(
+                sku,
+                category_id,
+                item.currency,
+                item.price,
+                fulfillment_id,
+                payment_id,
+                return_id,
+                location_key,
             )
             offer_id = self.selling_api.create_offer(offer)
 
             self.selling_api.publish_offer(offer_id)
 
-        except EbaySellingClientError as e:
+        except (EbaySellingClientError, EbayAccountClientError) as e:
             self._publish_cleanup(token, sku, offer_id)
 
             raise MarketplaceAPIError() from e
+
+        except AccountSettingsNotFound:
+            raise
 
     def _publish_cleanup(self, token: str, sku: str, offer_id: str | None = None):
         try:
@@ -82,6 +107,21 @@ class EbayAPI:
         except CategoriesNotFoundError:
             raise
 
+    def get_account_settings(self, token: str) -> AccountSettings:
+        def get_names(items):
+            return [it.name for it in items]
+
+        policies = self.account_api.get_all_policies(token)
+
+        return AccountSettings(
+            dict(
+                fulfillment_policies=get_names(policies["fulfillment_policies"]),
+                payment_policies=get_names(policies["payment_policies"]),
+                return_policies=get_names(policies["return_policies"]),
+                locations=get_names(self.selling_api.get_locations(token)),
+            )
+        )
+
     def _load_images(self, token: str, *images: str):
         images_urls = []
         for img in images:
@@ -89,25 +129,54 @@ class EbayAPI:
             images_urls.append(img_response.image_url)
         return images_urls
 
-    def _make_offer(
+    def _get_location_key(self, location_name: str) -> str:
+        locations = self.selling_api.get_locations()
+        for location in locations:
+            if location["name"].lower() == location_name.lower():
+                return location_name
+
+    def _get_policeis_ids(
+        self, ebay_policies: EbayPolicies, token: str
+    ) -> tuple[str, str, str] | None:
+        def find(policies, src_name):
+            for policy in policies:
+                if policy["name"].lower() == src_name.lower():
+                    return policy.id
+
+        policies = self.account_api.get_all_policies(token)
+
+        fulfillment_id = find(
+            policies.fulfillment_policies, ebay_policies.fulfillment_policy
+        )
+        payment_id = find(policies.payment_policies, ebay_policies.payment_policy)
+        return_id = find(policies.return_policies, ebay_policies.return_policy)
+
+        if not (fulfillment_id and payment_id and return_id):
+            return None
+
+        return fulfillment_id, payment_id, return_id
+
+    def _create_offer(
         self,
         sku: str,
         category_id: str,
         currency: str,
         price: float,
-        marketplace_aspects: EbayAspects,
+        marketplace: str,
+        fulfillment_policy_id: str,
+        payment_policy_id: str,
+        return_policy_id: str,
+        location_key: str,
     ):
         price = ebay_models.Price(currency=currency, value=price)
 
         policies = ebay_models.ListingPolicies(
-            fulfillment_policy_id=marketplace_aspects.policies.fulfillment_policy_id,
-            payment_policy_id=marketplace_aspects.policies.payment_policy_id,
-            return_policy_id=marketplace_aspects.policies.return_policy_id,
+            fulfillment_policy_id=fulfillment_policy_id,
+            payment_policy_id=payment_policy_id,
+            return_policy_id=return_policy_id,
         )
 
-        marketplace_id = marketplace_aspects.marketplace
-        location_key = marketplace_aspects.location_key
-
+        marketplace_id = marketplace
         return ebay_models.Offer(
             sku=sku,
             format="FIXED_PRICE",
@@ -162,7 +231,7 @@ class EbayAPI:
         return aspects
 
     @staticmethod
-    def _product_to_inventory_item(
+    def _to_inventory_item(
         item: Item[EbayAspects],
         images_urls: list[str],
         *,

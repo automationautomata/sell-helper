@@ -47,3 +47,7 @@ class PublishItemResponse(BaseModel):
 
 class MarketplaceLogoutResponse(BaseModel):
     status: str
+
+
+class MarketplaceAccountSettingsResponse(BaseModel):
+    settings: dict[str, list]

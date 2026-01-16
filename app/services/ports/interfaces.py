@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from ...domain.entities import (
+    AccountSettings,
     AspectField,
     IMetadata,
     Item,
@@ -64,6 +65,9 @@ class IMarketplaceAPI(Protocol):
     def get_product_aspects(
         self, category_name: str, **marketplace_settings: dict
     ) -> list[AspectField]:
+        pass
+
+    def get_account_settings(self, token: str) -> AccountSettings:
         pass
 
 
