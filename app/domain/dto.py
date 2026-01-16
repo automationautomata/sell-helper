@@ -45,3 +45,6 @@ class ItemDTO:
 class MarketplaceAccountDTO:
     user_uuid: uuid.UUID
     marketplace: str
+
+
+AccountSettingsDTO = dict[str, list]

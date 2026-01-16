@@ -3,7 +3,6 @@ import tempfile
 from uuid import UUID
 
 import aiofiles
-from app.domain.ports.errors import InvalidMarketplaceAspects, InvalidProductAspects
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import (
     APIRouter,
@@ -21,9 +20,12 @@ from ..domain.dto import ItemDTO, MarketplaceAccountDTO
 from ..domain.ports import (
     InvalidCategory,
     InvalidItemStructure,
+    InvalidMarketplaceAspects,
+    InvalidProductAspects,
     ISearchService,
     ISellingService,
     MarketplaceAuthorizationFailed,
+    MarketplaceUnauthorised,
     SearchServiceError,
     SellingServiceError,
 )
@@ -186,6 +188,7 @@ async def publish_item(
             detail_mapping = {
                 InvalidCategory: f"Invalid category: {item.category}",
                 MarketplaceAuthorizationFailed: f"User unauthorised in {marketplace}",
+                MarketplaceUnauthorised: f"User unauthorised in {marketplace}",
                 InvalidProductAspects: "Invalid product aspects",
                 InvalidMarketplaceAspects: "Invalid marketplace aspects",
             }

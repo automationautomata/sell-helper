@@ -1,5 +1,11 @@
-from ..domain.dto import AspectValueDTO, MarketplaceAccountDTO, ProductDTO
+from ..domain.dto import (
+    AccountSettingsDTO,
+    AspectValueDTO,
+    MarketplaceAccountDTO,
+    ProductDTO,
+)
 from ..domain.entities import MarketplaceAccount, Product
+from ..domain.entities.account import AccountSettings
 
 
 class FromDTO:
@@ -18,3 +24,7 @@ class FromEntity:
             )
 
         return ProductDTO(aspects=aspectDtos, metadata=product.metadata.asdict())
+
+    @staticmethod
+    def account_settings(account_settings: AccountSettings) -> AccountSettingsDTO:
+        return account_settings.settings

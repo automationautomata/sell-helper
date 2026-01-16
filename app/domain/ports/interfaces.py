@@ -57,3 +57,10 @@ class IMarketplaceOAuthService(Protocol):
 
     async def logout(self, account: dto.MarketplaceAccountDTO):
         pass
+
+
+class IMarketplaceAccountService(Protocol):
+    async def find_settings(
+        self, account: dto.MarketplaceAccountDTO
+    ) -> dto.AccountSettingsDTO:
+        pass

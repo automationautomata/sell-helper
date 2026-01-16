@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 import requests
 
 from ..utils import request_exception_chain
@@ -7,6 +9,11 @@ from .base import EbayRequestError, EbayUserClient
 
 class EbaySellingClientError(EbayRequestError):
     pass
+
+
+class Location(TypedDict):
+    name: str
+    merchant_location_key: str
 
 
 class EbaySellingClient(EbayUserClient):
@@ -50,6 +57,35 @@ class EbaySellingClient(EbayUserClient):
         )
         response.raise_for_status()
         return response.json()["offerId"]
+
+    @request_exception_chain(default=EbaySellingClientError)
+    def get_locations(self, token: str) -> list[Location]:
+        offset = 0, 0
+        max_limit = 100
+        locations = []
+        while True:
+            resp = requests.get(
+                self.url("/location"),
+                params={"offset": offset, "limit": max_limit},
+                headers=self._user_auth_header(token),
+            )
+            resp.raise_for_status()
+
+            data = resp.json()
+
+            for location in data["locations"]:
+                locations.append(
+                    Location(
+                        name=location["name"],
+                        merchant_location_key=location["merchantLocationKey"],
+                    )
+                )
+
+            if len(locations) == data["total"]:
+                break
+            offset += max_limit
+
+        return locations
 
     @request_exception_chain(default=EbaySellingClientError)
     def publish_offer(self, offer_id: int, token: str):
