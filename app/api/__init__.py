@@ -29,12 +29,8 @@ class AppBuilder:
         return self
 
     def middlewares(self, secrets: Secrets):
-        auth_prefixes = [
-            auth.PREFIX,
-            product.PREFIX,
-            marketplace_auth.PREFIX,
-        ]
         root = self.app.root_path
+        auth_prefixes = [product.PREFIX, marketplace_auth.PREFIX]
         self.app.middleware("http")(
             authentication(*[f"{root}{p}" for p in auth_prefixes])
         )
