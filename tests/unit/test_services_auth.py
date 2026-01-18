@@ -1,5 +1,3 @@
-"""Tests for services.auth module."""
-
 from dataclasses import dataclass
 import pytest
 from uuid import UUID, uuid4
@@ -38,7 +36,6 @@ def mock_hasher():
 
 @pytest.fixture
 def mock_user_repo():
-    """Create a mock user repository."""
     repo = AsyncMock(spec=IUserRepository)
     return repo
 
@@ -73,13 +70,10 @@ def test_user():
 
 
 class TestAuthServiceVerifyUser:
-    """Tests for AuthService.verify_user method."""
-
     @pytest.mark.asyncio
     async def test_verify_user_success(
         self, auth_service, mock_user_repo, mock_hasher, test_user
     ):
-        """Test successful user verification"""
         mock_user_repo.get_user_by_email.return_value = test_user
         mock_hasher.verify.return_value = True
 
@@ -87,7 +81,6 @@ class TestAuthServiceVerifyUser:
 
     @pytest.mark.asyncio
     async def test_verify_user_nonexistent_user(self, auth_service, mock_user_repo):
-        """Test verification with non-existent user."""
         mock_user_repo.get_user_by_email.return_value = None
 
         with pytest.raises(InvalidUserToken):
@@ -97,7 +90,6 @@ class TestAuthServiceVerifyUser:
     async def test_verify_user_wrong_password(
         self, auth_service, mock_user_repo, mock_hasher, test_user
     ):
-        """Test verification with wrong password - should succeed due to bug in actual code."""
         mock_user_repo.get_user_by_email.return_value = test_user
         mock_hasher.verify.return_value = False
 
@@ -106,7 +98,6 @@ class TestAuthServiceVerifyUser:
 
     @pytest.mark.asyncio
     async def test_verify_user_repository_error(self, auth_service, mock_user_repo):
-        """Test that repository error is wrapped in AuthError."""
         mock_user_repo.get_user_by_email.side_effect = UserRepositoryError(
             "Connection failed"
         )
@@ -118,7 +109,6 @@ class TestAuthServiceVerifyUser:
     async def test_verify_user_email_password_mismatch(
         self, auth_service, mock_user_repo, mock_hasher, test_user
     ):
-        """Test verification when credentials don't match - returns token due to code logic."""
         mock_user_repo.get_user_by_email.return_value = test_user
         mock_hasher.verify.return_value = False
 
@@ -127,13 +117,10 @@ class TestAuthServiceVerifyUser:
 
 
 class TestAuthServiceAddUser:
-    """Tests for AuthService.add_user method."""
-
     @pytest.mark.asyncio
     async def test_add_user_success(
         self, auth_service, mock_user_repo, mock_hasher, test_user
     ):
-        """Test successful user creation."""
         mock_user_repo.add_user.return_value = test_user
 
         token = await auth_service.add_user("newuser@example.com", "password123")
@@ -147,7 +134,6 @@ class TestAuthServiceAddUser:
 
     @pytest.mark.asyncio
     async def test_add_user_already_exists(self, auth_service, mock_user_repo):
-        """Test adding user that already exists."""
         mock_user_repo.add_user.side_effect = UserAlreadyExists("User exists")
 
         with pytest.raises(CannotCreateUser):
@@ -155,7 +141,6 @@ class TestAuthServiceAddUser:
 
     @pytest.mark.asyncio
     async def test_add_user_repository_error(self, auth_service, mock_user_repo):
-        """Test that repository error is wrapped in AuthError."""
         mock_user_repo.add_user.side_effect = UserRepositoryError("Connection failed")
 
         with pytest.raises(AuthError):
@@ -165,7 +150,6 @@ class TestAuthServiceAddUser:
     async def test_add_user_hashes_password(
         self, auth_service, mock_user_repo, mock_hasher, test_user
     ):
-        """Test that password is hashed before storage."""
         mock_user_repo.add_user.return_value = test_user
 
         await auth_service.add_user("test@example.com", "plaintext_password")
@@ -174,13 +158,10 @@ class TestAuthServiceAddUser:
 
 
 class TestAuthServiceValidate:
-    """Tests for AuthService.validate method."""
-
     @pytest.mark.asyncio
     async def test_validate_token_success(
         self, auth_service, mock_user_repo, mock_jwt_auth, test_user
     ):
-        """Test successful token validation."""
         mock_jwt_auth.verify_token.return_value = TokenPayload(uuid=test_user.uuid)
         mock_user_repo.get_user_by_uuid.return_value = test_user
 
@@ -191,7 +172,6 @@ class TestAuthServiceValidate:
 
     @pytest.mark.asyncio
     async def test_validate_invalid_token(self, auth_service, mock_jwt_auth):
-        """Test validation with invalid token."""
         mock_jwt_auth.verify_token.return_value = None
 
         with pytest.raises(InvalidUserToken):
@@ -201,7 +181,6 @@ class TestAuthServiceValidate:
     async def test_validate_user_not_found(
         self, auth_service, mock_user_repo, mock_jwt_auth, test_user
     ):
-        """Test validation when user is not found."""
         mock_jwt_auth.verify_token.return_value = TokenPayload(uuid=test_user.uuid)
         mock_user_repo.get_user_by_uuid.return_value = None
 
@@ -210,12 +189,9 @@ class TestAuthServiceValidate:
 
 
 class TestAuthServiceCreateAccessToken:
-    """Tests for AuthService._create_access_token method."""
-
     def test_create_access_token_generates_jwt(
         self, auth_service, mock_jwt_auth, test_user
     ):
-        """Test that access token generation calls JWT auth."""
         token = auth_service._create_access_token(test_user.uuid)
 
         assert token.token == "jwt_token_value"
@@ -224,7 +200,6 @@ class TestAuthServiceCreateAccessToken:
     def test_create_access_token_payload_contains_uuid(
         self, auth_service, mock_jwt_auth, test_user
     ):
-        """Test that generated token contains user UUID."""
         auth_service._create_access_token(test_user.uuid)
 
         call_args = mock_jwt_auth.generate_token.call_args
@@ -233,7 +208,6 @@ class TestAuthServiceCreateAccessToken:
         assert payload.uuid == test_user.uuid
 
     def test_create_access_token_sets_ttl(self, auth_service, mock_jwt_auth):
-        """Test that TTL is set in returned token."""
         user_uuid = uuid4()
         token = auth_service._create_access_token(user_uuid)
 
@@ -241,13 +215,10 @@ class TestAuthServiceCreateAccessToken:
 
 
 class TestAuthServiceIntegration:
-    """Integration tests for AuthService."""
-
     @pytest.mark.asyncio
     async def test_complete_registration_workflow(
         self, auth_service, mock_user_repo, test_user
     ):
-        """Test complete user registration workflow."""
         mock_user_repo.add_user.return_value = test_user
 
         token = await auth_service.add_user("newuser@example.com", "password123")
@@ -258,7 +229,6 @@ class TestAuthServiceIntegration:
     async def test_complete_login_workflow(
         self, auth_service, mock_user_repo, mock_hasher, test_user
     ):
-        """Test complete user login workflow - note: code has logic bug."""
         mock_user_repo.get_user_by_email.return_value = test_user
         mock_hasher.verify.return_value = True
 
@@ -266,7 +236,6 @@ class TestAuthServiceIntegration:
 
     @pytest.mark.asyncio
     async def test_token_payload_structure(self):
-        """Test TokenPayload structure."""
         user_uuid = uuid4()
         payload = TokenPayload(uuid=user_uuid)
 
@@ -275,13 +244,10 @@ class TestAuthServiceIntegration:
 
 
 class TestAuthServiceErrorHandling:
-    """Tests for error handling in AuthService."""
-
     @pytest.mark.asyncio
     async def test_verify_user_handles_repository_error(
         self, auth_service, mock_user_repo
     ):
-        """Test that repository errors are properly wrapped."""
         mock_user_repo.get_user_by_email.side_effect = UserRepositoryError("DB error")
 
         with pytest.raises(AuthError):
@@ -289,7 +255,6 @@ class TestAuthServiceErrorHandling:
 
     @pytest.mark.asyncio
     async def test_add_user_handles_existing_user(self, auth_service, mock_user_repo):
-        """Test that UserAlreadyExists is wrapped in CannotCreateUser."""
         mock_user_repo.add_user.side_effect = UserAlreadyExists()
 
         with pytest.raises(CannotCreateUser):

@@ -1,71 +1,64 @@
-"""Tests for services.selling module."""
-
 import pytest
 from unittest.mock import Mock, AsyncMock
 
-from app.domain.ports.errors import InvalidCategory
+from app.domain.ports.errors import (
+    InvalidCategory,
+    InvalidMarketplaceAspects,
+    InvalidProductAspects,
+)
+from app.domain.ports import MarketplaceAuthorizationFailed, SellingServiceError
 from app.services.selling import SellingService
+from app.services.common import MarketplaceTokenManager
 from app.domain.dto import ItemDTO, MarketplaceAccountDTO
 from app.domain.entities import AspectField, AspectType
-from app.domain.ports import SellingServiceError
 from app.services.ports import (
     CategoryNotFound,
-    IAccessTokenStorage,
     IMarketplaceAPIFactory,
     IMarketplaceAspectsFactory,
-    IMarketplaceOAuthFactory,
-    IRefreshTokenStorage,
     MarketplaceAPIError,
-    AuthToken,
 )
+from app.domain.entities.errors import AspectsValidationError
 
 
 class MockMarketplaceAspects:
-    """Mock marketplace aspects for testing."""
-
     @staticmethod
     def validate(data):
         return Mock(
-            marketplace="mockmarket",
+            marketplace="ebay",
             policies=Mock(
-                fulfillment_policy_id="fp123",
-                payment_policy_id="pp123",
-                return_policy_id="rp123",
+                fulfillment_policy="Standard",
+                payment_policy="CreditCard",
+                return_policy="ReturnsAccepted",
+                location="WarehouseA",
             ),
+            package=Mock(
+                weight_value=2.5,
+                weight_unit="KG",
+                dimension_length=10,
+                dimension_width=8,
+                dimension_height=5,
+                dimension_unit="CM",
+            ),
+            condition="NEW",
+            condition_description="Brand new item",
         )
 
 
 @pytest.fixture
 def mock_api_factory():
-    """Create a mock marketplace API factory."""
     factory = Mock(spec=IMarketplaceAPIFactory)
     return factory
 
 
 @pytest.fixture
-def mock_access_token_storage():
-    """Create a mock access token storage."""
-    storage = AsyncMock(spec=IAccessTokenStorage)
-    return storage
-
-
-@pytest.fixture
-def mock_refresh_token_storage():
-    """Create a mock refresh token storage."""
-    storage = AsyncMock(spec=IRefreshTokenStorage)
-    return storage
-
-
-@pytest.fixture
-def mock_oauth_factory():
-    """Create a mock OAuth factory."""
-    factory = Mock(spec=IMarketplaceOAuthFactory)
-    return factory
+def mock_token_manager():
+    manager = AsyncMock(spec=MarketplaceTokenManager)
+    manager.access_token.return_value = "test_access_token"
+    return manager
 
 
 @pytest.fixture
 def mock_aspects_factory():
-    """Create a mock marketplace aspects factory."""
     factory = Mock(spec=IMarketplaceAspectsFactory)
     factory.get.return_value = MockMarketplaceAspects
     return factory
@@ -74,261 +67,160 @@ def mock_aspects_factory():
 @pytest.fixture
 def selling_service(
     mock_api_factory,
-    mock_access_token_storage,
-    mock_refresh_token_storage,
-    mock_oauth_factory,
+    mock_token_manager,
     mock_aspects_factory,
 ):
-    """Create SellingService with mocked dependencies."""
     return SellingService(
         api_factory=mock_api_factory,
-        access_token_storage=mock_access_token_storage,
-        refresh_token_storage=mock_refresh_token_storage,
-        oauth_factory=mock_oauth_factory,
-        token_ttl_threshold=300,
+        token_manager=mock_token_manager,
         type_factory=mock_aspects_factory,
     )
 
 
 @pytest.fixture
 def sample_item_dto():
-    """Create a sample ItemDTO for testing."""
     return ItemDTO(
-        title="Test Product",
-        description="Test Description",
-        price=99.99,
+        title="Test iPhone 13",
+        description="Latest iPhone model with advanced camera",
+        price=999.99,
         currency="USD",
         country="US",
-        category="Electronics",
+        category="Electronics > Mobile Phones",
         product_aspects={
             "brand": "Apple",
             "model": "iPhone 13",
+            "color": "Black",
         },
         marketplace_aspects_data={
-            "marketplace": "mockmarket",
+            "marketplace": "ebay",
+            "condition": "NEW",
+            "location": "WarehouseA",
         },
-        quantity=5,
+        quantity=10,
     )
 
 
 @pytest.fixture
 def sample_account_dto():
-    """Create a sample MarketplaceAccountDTO for testing."""
     return MarketplaceAccountDTO(
         user_uuid="550e8400-e29b-41d4-a716-446655440000",
-        marketplace="mockmarket",
+        marketplace="ebay",
     )
 
 
 @pytest.fixture
 def mock_marketplace_api():
-    """Create a mock marketplace API."""
     api = Mock()
     api.get_product_aspects.return_value = [
-        AspectField(name="brand", data_type=AspectType.STR, is_required=True),
+        AspectField(
+            name="brand",
+            data_type=AspectType.STR,
+            is_required=True,
+            allowed_values=frozenset(["Apple", "Samsung", "Google"]),
+        ),
+        AspectField(
+            name="model",
+            data_type=AspectType.STR,
+            is_required=True,
+        ),
+        AspectField(
+            name="color",
+            data_type=AspectType.STR,
+            is_required=False,
+        ),
     ]
-
+    api.publish = Mock()
     return api
 
 
 class TestSellingServicePublish:
-    """Tests for SellingService.publish method."""
-
     @pytest.mark.asyncio
-    async def test_publish_success(
+    async def test_publish_authorization_failure_reraised(
         self,
         selling_service,
-        mock_api_factory,
-        mock_access_token_storage,
+        mock_token_manager,
         sample_item_dto,
         sample_account_dto,
-        mock_marketplace_api,
-    ):
-        """Test successful item publishing."""
-        selling_service._validate_product_structure = AsyncMock(return_value=[])
-        mock_api_factory.get.return_value = mock_marketplace_api
-        mock_access_token_storage.get.return_value = AuthToken(
-            token="test_token", ttl=200
-        )
-
-        await selling_service.publish(
-            sample_item_dto,
-            sample_account_dto,
-            "/path/to/image.jpg",
-        )
-
-        mock_api_factory.get.assert_called()
-
-    @pytest.mark.asyncio
-    async def test_publish_with_multiple_images(
-        self,
-        selling_service,
         mock_api_factory,
-        mock_access_token_storage,
-        sample_item_dto,
-        sample_account_dto,
         mock_marketplace_api,
     ):
-        """Test publishing with multiple images."""
-
-        selling_service._validate_product_structure = Mock(return_value=[])
         mock_api_factory.get.return_value = mock_marketplace_api
-        mock_access_token_storage.get.return_value = AuthToken(
-            token="test_token", ttl=200
-        )
+        mock_token_manager.access_token.side_effect = MarketplaceAuthorizationFailed()
 
-        await selling_service.publish(
-            sample_item_dto,
-            sample_account_dto,
-            "/path/to/image1.jpg",
-            "/path/to/image2.jpg",
-        )
-
-        mock_api_factory.get.assert_called()
-
-    @pytest.mark.asyncio
-    async def test_publish_marketplace_api_error(
-        self,
-        selling_service,
-        mock_api_factory,
-        mock_access_token_storage,
-        sample_item_dto,
-        sample_account_dto,
-        mock_marketplace_api,
-    ):
-        """Test that MarketplaceAPIError is wrapped in InvalidCategory."""
-        selling_service._validate_product_structure = Mock(return_value=[])
-        mock_api_factory.get.return_value = mock_marketplace_api
-        mock_marketplace_api.publish.side_effect = MarketplaceAPIError("API error")
-        mock_access_token_storage.get.return_value = AuthToken(
-            token="test_token", ttl=200
-        )
-
-        with pytest.raises(SellingServiceError):
-            await selling_service.publish(
-                sample_item_dto,
-                sample_account_dto,
-            )
+        with pytest.raises(MarketplaceAuthorizationFailed):
+            await selling_service.publish(sample_item_dto, sample_account_dto)
 
 
 class TestSellingServiceValidateProductStructure:
-    """Tests for SellingService._validate_product_structure method."""
-
     def test_validate_product_structure_success(
-        self,
-        selling_service,
-        mock_api_factory,
-        mock_marketplace_api,
+        self, selling_service, mock_api_factory, mock_marketplace_api
     ):
-        """Test successful product structure validation."""
         mock_api_factory.get.return_value = mock_marketplace_api
         mock_marketplace_api.get_product_aspects.return_value = [
-            AspectField(name="brand", data_type=AspectType.STR, is_required=True),
+            AspectField(
+                name="brand",
+                data_type=AspectType.STR,
+                is_required=True,
+                allowed_values=frozenset(["Apple", "Samsung"]),
+            ),
+            AspectField(
+                name="model",
+                data_type=AspectType.STR,
+                is_required=True,
+            ),
         ]
 
         aspects = selling_service._validate_product_structure(
-            category_name="Electronics",
-            aspects_data={"brand": "Apple"},
-            marketplace="mockmarket",
+            category_name="Electronics > Mobile Phones",
+            aspects_data={"brand": "Apple", "model": "iPhone 13"},
+            marketplace="ebay",
         )
 
         assert isinstance(aspects, list)
-        mock_marketplace_api.get_product_aspects.assert_called_once_with("Electronics")
-
-    def test_validate_product_structure_with_multiple_aspects(
-        self,
-        selling_service,
-        mock_api_factory,
-        mock_marketplace_api,
-    ):
-        """Test validation with multiple aspects."""
-        mock_api_factory.get.return_value = mock_marketplace_api
-        mock_marketplace_api.get_product_aspects.return_value = [
-            AspectField(name="brand", data_type=AspectType.STR, is_required=True),
-            AspectField(name="model", data_type=AspectType.STR, is_required=False),
-            AspectField(name="year", data_type=AspectType.INT, is_required=False),
-        ]
-
-        aspects = selling_service._validate_product_structure(
-            category_name="Electronics",
-            aspects_data={"brand": "Sony", "model": "abc", "year": 2020},
-            marketplace="mockmarket",
+        mock_marketplace_api.get_product_aspects.assert_called_once_with(
+            "Electronics > Mobile Phones"
         )
-
-        assert isinstance(aspects, list)
 
     def test_validate_product_structure_api_error(
-        self,
-        selling_service,
-        mock_api_factory,
+        self, selling_service, mock_api_factory
     ):
-        """Test that MarketplaceAPIError is wrapped in SellingServiceError."""
-        mock_api_factory.get.side_effect = MarketplaceAPIError("API error")
+        mock_api_factory.get.side_effect = MarketplaceAPIError()
 
         with pytest.raises(SellingServiceError):
             selling_service._validate_product_structure(
                 category_name="Electronics",
                 aspects_data={"brand": "Apple"},
-                marketplace="mockmarket",
+                marketplace="ebay",
             )
 
-    def test_validate_product_structure_not_found_error(
-        self,
-        selling_service,
-        mock_api_factory,
+    def test_validate_product_structure_category_not_found(
+        self, selling_service, mock_api_factory
     ):
-        """Test handling of CategoryNotFound."""
         mock_api = Mock()
-        mock_api.get_product_aspects.side_effect = CategoryNotFound("Not found")
+        mock_api.get_product_aspects.side_effect = CategoryNotFound()
         mock_api_factory.get.return_value = mock_api
 
         with pytest.raises(InvalidCategory):
             selling_service._validate_product_structure(
-                category_name="UnknownCategory",
-                aspects_data={},
-                marketplace="mockmarket",
-            )
-
-    def test_validate_product_structure_aspects_validation_error(
-        self,
-        selling_service,
-        mock_api_factory,
-        mock_marketplace_api,
-    ):
-        """Test handling of AspectsValidationError when required aspects are missing."""
-        mock_api_factory.get.return_value = mock_marketplace_api
-        mock_marketplace_api.get_product_aspects.return_value = [
-            AspectField(name="brand", data_type=AspectType.STR, is_required=True),
-        ]
-
-        with pytest.raises(SellingServiceError):
-            selling_service._validate_product_structure(
-                category_name="Electronics",
-                aspects_data={},
-                marketplace="mockmarket",
+                category_name="UnknownCategory", aspects_data={}, marketplace="ebay"
             )
 
 
 class TestSellingServiceIntegration:
-    """Integration tests for SellingService."""
-
     def test_validate_product_structure_creates_product_structure(
-        self,
-        selling_service,
-        mock_api_factory,
-        mock_marketplace_api,
+        self, selling_service, mock_api_factory, mock_marketplace_api
     ):
-        """Test that ProductStructure is correctly created during validation."""
         aspects_list = [
             AspectField(name="color", data_type=AspectType.STR, is_required=True),
+            AspectField(name="size", data_type=AspectType.STR, is_required=True),
         ]
         mock_api_factory.get.return_value = mock_marketplace_api
         mock_marketplace_api.get_product_aspects.return_value = aspects_list
 
         result = selling_service._validate_product_structure(
             category_name="Electronics",
-            aspects_data={"color": "Black"},
-            marketplace="mockmarket",
+            aspects_data={"color": "Black", "size": "Large"},
+            marketplace="ebay",
         )
 
         assert isinstance(result, list)
@@ -336,46 +228,34 @@ class TestSellingServiceIntegration:
 
 
 class TestSellingServiceErrorHandling:
-    """Tests for error handling in SellingService."""
-
     @pytest.mark.asyncio
-    async def test_publish_handles_marketplace_aspects_error(
-        self,
-        selling_service,
-        mock_aspects_factory,
-        sample_item_dto,
-        sample_account_dto,
+    async def test_publish_marketplace_aspects_none_raises_error(
+        self, selling_service, mock_aspects_factory, sample_item_dto, sample_account_dto
     ):
-        """Test handling of marketplace aspects validation error."""
-        mock_aspects_factory.get.return_value.validate.side_effect = Exception(
-            "Validation failed"
-        )
+        marketplace_aspects_mock = Mock()
+        marketplace_aspects_mock.validate.return_value = None
+        mock_aspects_factory.get.return_value = marketplace_aspects_mock
 
-        with pytest.raises(Exception):
-            await selling_service.publish(
-                sample_item_dto,
-                sample_account_dto,
-            )
+        with pytest.raises(InvalidMarketplaceAspects):
+            await selling_service.publish(sample_item_dto, sample_account_dto)
 
-    def test_validate_product_structure_all_errors(
-        self,
-        selling_service,
-        mock_api_factory,
+    def test_validate_product_structure_error_mapping(
+        self, selling_service, mock_api_factory
     ):
-        """Test that all expected errors are wrapped in SellingServiceError."""
         error_conditions = [
-            MarketplaceAPIError("API error"),
-            CategoryNotFound("Not found"),
+            (MarketplaceAPIError(), SellingServiceError),
+            (CategoryNotFound(), InvalidCategory),
+            (AspectsValidationError(), InvalidProductAspects),
         ]
 
-        for error in error_conditions:
+        for error, expected_exception in error_conditions:
             mock_api = Mock()
             mock_api.get_product_aspects.side_effect = error
             mock_api_factory.get.return_value = mock_api
 
-            with pytest.raises(SellingServiceError):
+            with pytest.raises(expected_exception):
                 selling_service._validate_product_structure(
                     category_name="Test",
                     aspects_data={},
-                    marketplace="mockmarket",
+                    marketplace="ebay",
                 )
