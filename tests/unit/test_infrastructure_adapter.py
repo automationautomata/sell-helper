@@ -1,5 +1,3 @@
-"""Tests for infrastructure.adapter module."""
-
 from typing import Self
 import pytest
 from dataclasses import asdict, dataclass
@@ -21,8 +19,6 @@ from app.domain.entities import (
 
 @dataclass
 class MockMetadata:
-    """Mock metadata for testing."""
-
     title: str
     description: str
     price: float
@@ -37,7 +33,6 @@ class MockMetadata:
 
 @pytest.fixture
 def product_structure():
-    """Create a product structure for testing."""
     return ProductStructure(
         fields=[
             AspectField(name="brand", data_type=AspectType.STR, is_required=True),
@@ -49,7 +44,6 @@ def product_structure():
 
 @pytest.fixture
 def valid_raw_data():
-    """Create valid raw product data."""
     return {
         "aspects": {
             "brand": "Apple",
@@ -65,10 +59,7 @@ def valid_raw_data():
 
 
 class TestProductAdapterToProduct:
-    """Tests for ProductAdapter.to_product method."""
-
     def test_to_product_success(self, product_structure, valid_raw_data):
-        """Test successful conversion of raw data to Product."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
 
         product = adapter.to_product(valid_raw_data, product_structure)
@@ -79,7 +70,6 @@ class TestProductAdapterToProduct:
         assert len(product.aspects) == 3
 
     def test_to_product_with_missing_optional_aspects(self, product_structure):
-        """Test conversion with missing optional aspects."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         raw_data = {
             "aspects": {
@@ -98,7 +88,6 @@ class TestProductAdapterToProduct:
         assert len([a for a in product.aspects if a.name == "brand"]) == 1
 
     def test_to_product_with_empty_aspects(self, product_structure):
-        """Test conversion with empty aspects dict."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         raw_data = {
             "aspects": {},
@@ -112,7 +101,6 @@ class TestProductAdapterToProduct:
             adapter.to_product(raw_data, product_structure)
 
     def test_to_product_invalid_metadata_raises_error(self, product_structure):
-        """Test that invalid metadata raises InvalidMetadataError."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         raw_data = {
             "aspects": {"brand": "Apple"},
@@ -125,7 +113,6 @@ class TestProductAdapterToProduct:
             adapter.to_product(raw_data, product_structure)
 
     def test_to_product_invalid_metadata_type_raises_error(self, product_structure):
-        """Test that incorrect metadata type raises InvalidMetadataError."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         raw_data = {
             "aspects": {"brand": "Apple"},
@@ -140,7 +127,6 @@ class TestProductAdapterToProduct:
             adapter.to_product(raw_data, product_structure)
 
     def test_to_product_missing_aspects_section(self):
-        """Test handling of missing aspects section."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         product_structure = ProductStructure(fields=[])
         raw_data = {
@@ -157,7 +143,6 @@ class TestProductAdapterToProduct:
         assert product.metadata.title == "Test"
 
     def test_to_product_missing_metadata_section(self, product_structure):
-        """Test handling of missing metadata section."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         raw_data = {"aspects": {"brand": "Sony"}}
 
@@ -166,10 +151,7 @@ class TestProductAdapterToProduct:
 
 
 class TestProductAdapterToSchema:
-    """Tests for ProductAdapter.to_schema method."""
-
     def test_to_schema_with_aspects(self):
-        """Test schema generation with aspects."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         aspects = [
             AspectField(name="brand", data_type=AspectType.STR, is_required=True),
@@ -185,7 +167,6 @@ class TestProductAdapterToSchema:
         assert "$defs" in schema
 
     def test_to_schema_without_aspects(self):
-        """Test schema generation without aspects."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
 
         schema = adapter.to_schema([])
@@ -194,7 +175,6 @@ class TestProductAdapterToSchema:
         assert "properties" in schema
 
     def test_to_schema_allows_additional_aspects(self):
-        """Test schema generation with allow_additional_aspects."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         aspects = [
             AspectField(name="brand", data_type=AspectType.STR, is_required=True),
@@ -206,7 +186,6 @@ class TestProductAdapterToSchema:
         assert "$defs" in schema
 
     def test_to_schema_structure(self):
-        """Test that generated schema has proper structure."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         aspects = [
             AspectField(name="test", data_type=AspectType.STR, is_required=True),
@@ -219,10 +198,7 @@ class TestProductAdapterToSchema:
 
 
 class TestProductAdapterAspectsSchema:
-    """Tests for ProductAdapter._build_aspects_schema method."""
-
     def test_build_aspects_schema_with_different_types(self):
-        """Test building schema with different aspect types."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         aspects = [
             AspectField(name="name", data_type=AspectType.STR, is_required=True),
@@ -238,7 +214,6 @@ class TestProductAdapterAspectsSchema:
         assert "properties" in schema
 
     def test_build_aspects_schema_required_fields(self):
-        """Test that required fields are properly marked in schema."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         aspects = [
             AspectField(
@@ -258,15 +233,10 @@ class TestProductAdapterAspectsSchema:
 
 
 class TestProductAdapterErrors:
-    """Tests for error handling in ProductAdapter."""
-
     def test_invalid_aspects_error_from_aspects_validation(self, product_structure):
-        """Test that AspectsValidationError is wrapped in InvalidAspectsError."""
         adapter = ProductAdapter(metadata_type=MockMetadata)
         raw_data = {
-            "aspects": {
-                # Missing required aspect 'brand' - will cause validation error
-            },
+            "aspects": {},
             "metadata": {
                 "title": "Test",
                 "description": "Test",
@@ -278,13 +248,10 @@ class TestProductAdapterErrors:
             adapter.to_product(raw_data, product_structure)
 
     def test_product_adapter_error_is_base_exception(self):
-        """Test that ProductAdapterError is an Exception."""
         assert issubclass(ProductAdapterError, Exception)
 
     def test_invalid_metadata_error_inheritance(self):
-        """Test that InvalidMetadataError inherits from ProductAdapterError."""
         assert issubclass(InvalidMetadataError, ProductAdapterError)
 
     def test_invalid_aspects_error_inheritance(self):
-        """Test that InvalidAspectsError inherits from ProductAdapterError."""
         assert issubclass(InvalidAspectsError, ProductAdapterError)
