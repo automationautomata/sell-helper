@@ -10,7 +10,7 @@ def extract_barcodes(img_path: str) -> list[str]:
         img_path (str): Path to the image file containing barcodes
 
     Returns:
-        list[str]: List of decoded barcode values
+        list[str]: list of decoded barcode values
     """
     image = cv2.imread(img_path)
 

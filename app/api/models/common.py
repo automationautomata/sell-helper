@@ -1,6 +1,3 @@
-from enum import Enum
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -18,8 +15,4 @@ class Dimension(BaseModel):
 
 class Package(BaseModel):
     weight: Weight
-    dimensions: Optional[Dimension] = None
-
-
-class Marketplace(str, Enum):
-    EBAY = "ebay"
+    dimensions: Dimension | None = None

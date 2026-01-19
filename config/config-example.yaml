@@ -1,0 +1,9 @@
+perplexity:
+  model: sonar-pro
+  
+ebay:
+  domain: api.sandbox.ebay.com
+  appid: <something>
+  devid: <something>
+  certid: <something>
+  redirect_uri: <something>

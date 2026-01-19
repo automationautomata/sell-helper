@@ -1,21 +1,35 @@
 import json
 from enum import Enum
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, model_validator
 
 from .common import Package
 
 
-class UserSingInRequest(BaseModel):
+class UserLogin(BaseModel):
     email: str
     password: str
 
 
-class ProductRequest(BaseModel):
+class UserRegistration(BaseModel):
+    email: str
+    password: str
+
+
+class EbayOptions(BaseModel):
+    marketplace: str
+
+
+class SearchOptions(BaseModel):
+    options: EbayOptions | None
+
+
+class SearchProductAspects(BaseModel):
     product_name: str
     category: str
     comment: str = ""
+    options: SearchOptions
 
 
 class MarketplaceAspects(BaseModel):
@@ -32,17 +46,25 @@ class EbayCondition(str, Enum):
     FOR_PARTS_OR_NOT_WORKING = "FOR_PARTS_OR_NOT_WORKING"
 
 
-class EbayMarketplaceAspects(MarketplaceAspects):
+class EbayAspects(MarketplaceAspects):
+    class Policies(BaseModel):
+        fulfillment_policy_id: str
+        payment_policy_id: str
+        return_policy_id: str
+
+    location_key: str
     marketplace: str
     package: Package
     condition: EbayCondition
-    condition_description: Optional[str] = None
+    policies: Policies
+    condition: str
+    condition_description: str | None = None
 
 
-MarketplaceAspectsUnion = Union[EbayMarketplaceAspects, MarketplaceAspects]
+MarketplaceAspectsUnion = EbayAspects | MarketplaceAspects
 
 
-class SellItemRequest(BaseModel):
+class PublishItem(BaseModel):
     title: str
     description: str
     price: float
@@ -50,12 +72,12 @@ class SellItemRequest(BaseModel):
     country: str
     quantity: int
     category: str
-    product: Dict[str, Any]
-    marketplace_aspects: MarketplaceAspectsUnion
+    product_aspects: dict[str, Any]
+    marketplace_aspects_data: MarketplaceAspectsUnion
 
     @model_validator(mode="before")
     @classmethod
     def validator(cls, value):
-        if isinstance(value, (str, bytes, bytearray)):
+        if isinstance(value, str | bytes | bytearray):
             return json.loads(value)
         return value
