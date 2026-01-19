@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 from redis.asyncio import Redis, RedisError
 
-from ..domain.entities import MarketplaceAccount
-from ..services.ports import (
+from app.domain.entities import MarketplaceAccount
+from app.services.ports import (
     AcessTokenStorageError,
     AuthToken,
     TokenExpiredError,

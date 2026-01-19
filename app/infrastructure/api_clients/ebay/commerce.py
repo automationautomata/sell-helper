@@ -1,6 +1,7 @@
 import requests
 
-from ....data import OAuth2Settings
+from app.data import OAuth2Settings
+
 from ..utils import request_exception_chain
 from .base import EbayRequestError, EbayUserClient
 from .models import EbayDomain, ImageResponse

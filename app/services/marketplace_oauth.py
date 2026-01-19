@@ -1,12 +1,13 @@
 import uuid
 from dataclasses import dataclass
 
-from ..domain.dto import MarketplaceAccountDTO
-from ..domain.ports import (
+from app.domain.dto import MarketplaceAccountDTO
+from app.domain.ports import (
     InvalidToken,
     MarketplaceOAuthServiceError,
     MarketplaceUnauthorised,
 )
+
 from .mapping import FromDTO
 from .ports import (
     IAccessTokenStorage,

@@ -2,12 +2,13 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, select
 
-from ..domain.entities import MarketplaceAccount
-from ..services.ports import (
+from app.domain.entities import MarketplaceAccount
+from app.services.ports import (
     AuthToken,
     RefreshTokenStorageError,
     TokenExpiredError,
 )
+
 from .base import BaseRepository
 from .models import RefreshToken
 

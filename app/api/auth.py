@@ -1,7 +1,7 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, status
 
-from ..domain.ports import (
+from app.domain.ports import (
     AuthError,
     IAuthService,
     InvalidUserToken,
@@ -9,7 +9,8 @@ from ..domain.ports import (
     RegistrationError,
     UserAlreadyExists,
 )
-from ..logger import logger
+from app.logger import logger
+
 from .models.requests import UserLogin, UserRegistration
 from .models.responses import TokenResponse
 

@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from ..domain.dto import Token
-from ..domain.ports import (
+from app.domain.dto import Token
+from app.domain.ports import (
     AuthError,
     CannotCreateUser,
     InvalidUserToken,
 )
+
 from .ports import (
     IHasher,
     IJWTAuth,

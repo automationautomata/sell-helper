@@ -2,13 +2,14 @@ from dataclasses import dataclass
 
 from dishka import FromComponent, Provider, Scope, from_context, provide
 
-from ..domain.ports import (
+from app.domain.ports import (
     IAuthService,
     IMarketplaceOAuthService,
     IRegistrationService,
     ISearchService,
     ISellingService,
 )
+
 from . import ports
 from .auth import AuthService
 from .marketplace_oauth import MarketplaceOAuthService

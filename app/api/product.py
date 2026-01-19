@@ -3,7 +3,6 @@ import tempfile
 from uuid import UUID
 
 import aiofiles
-from app.domain.ports.errors import InvalidMarketplaceAspects, InvalidProductAspects
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import (
     APIRouter,
@@ -16,9 +15,9 @@ from fastapi import (
     status,
 )
 
-from ..data import Marketplace
-from ..domain.dto import ItemDTO, MarketplaceAccountDTO
-from ..domain.ports import (
+from app.data import Marketplace
+from app.domain.dto import ItemDTO, MarketplaceAccountDTO
+from app.domain.ports import (
     InvalidCategory,
     InvalidItemStructure,
     ISearchService,
@@ -27,7 +26,9 @@ from ..domain.ports import (
     SearchServiceError,
     SellingServiceError,
 )
-from ..logger import logger
+from app.domain.ports.errors import InvalidMarketplaceAspects, InvalidProductAspects
+from app.logger import logger
+
 from ..utils import utils
 from .middlewares import get_user_uuid
 from .models.requests import (

@@ -2,7 +2,7 @@ from typing import TypeVar
 
 from authlib.integrations.starlette_client import StarletteOAuth2App
 
-from ..data import Marketplace
+from app.data import Marketplace
 
 T = TypeVar("T")
 

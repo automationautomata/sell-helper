@@ -3,8 +3,8 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import HTTPException, Request, Response, status
 
-from ..domain.ports import AuthError, IAuthService, InvalidUserToken
-from ..logger import logger
+from app.domain.ports import AuthError, IAuthService, InvalidUserToken
+from app.logger import logger
 
 
 def get_user_uuid(request: Request) -> uuid.UUID:

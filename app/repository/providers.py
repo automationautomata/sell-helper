@@ -1,6 +1,7 @@
 from dishka import Provider, Scope, provide
 
-from ..services.ports import IRefreshTokenStorage, IUserRepository
+from app.services.ports import IRefreshTokenStorage, IUserRepository
+
 from .refresh_tokens import RefreshTokenRepository
 from .user import UserRepository
 

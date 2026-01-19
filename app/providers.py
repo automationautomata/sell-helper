@@ -15,10 +15,10 @@ from perplexity import Perplexity as PerplexityClient
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from .api.dependencies import OAuth2ClientMapping
-from .config import DBConfig, EbayConfig, RedisConfig
-from .data import Marketplace, OAuth2Settings
-from .infrastructure.providers import EbayClientSettings, SKUGenerator
+from app.api.dependencies import OAuth2ClientMapping
+from app.config import DBConfig, EbayConfig, RedisConfig
+from app.data import Marketplace, OAuth2Settings
+from app.infrastructure.providers import EbayClientSettings, SKUGenerator
 
 
 class DBProvider(Provider):

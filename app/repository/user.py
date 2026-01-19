@@ -2,7 +2,8 @@ import uuid
 
 from sqlalchemy.future import select
 
-from ..domain.entities.user import User
+from app.domain.entities.user import User
+
 from .base import BaseRepository
 from .models import UserModel
 

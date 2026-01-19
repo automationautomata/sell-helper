@@ -1,16 +1,16 @@
 from dataclasses import asdict, dataclass
 
-from ..domain.dto import ItemDTO, MarketplaceAccountDTO
-from ..domain.entities import (
+from app.domain.dto import ItemDTO, MarketplaceAccountDTO
+from app.domain.entities import (
     AspectValue,
     Item,
     MarketplaceAccount,
     ProductStructure,
 )
-from ..domain.entities.errors import (
+from app.domain.entities.errors import (
     AspectsValidationError,
 )
-from ..domain.ports import (
+from app.domain.ports import (
     InvalidCategory,
     InvalidMarketplaceAspects,
     InvalidProductAspects,
@@ -18,6 +18,7 @@ from ..domain.ports import (
     SellingServiceError,
     UserUnauthorisedInMarketplace,
 )
+
 from .mapping import FromDTO
 from .ports import (
     CategoryNotFound,

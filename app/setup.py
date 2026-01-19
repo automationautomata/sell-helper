@@ -5,9 +5,9 @@ from dishka.integrations.fastapi import FastapiProvider
 from fastapi import FastAPI
 from passlib.hash import pbkdf2_sha256
 
-from .api import AppBuilder
-from .config import Config, DBConfig, EbayConfig, RedisConfig
-from .infrastructure.providers import (
+from app.api import AppBuilder
+from app.config import Config, DBConfig, EbayConfig, RedisConfig
+from app.infrastructure.providers import (
     EbayInfrastructureProvider,
     FactoriesProvider,
     InfrastructureProvider,
@@ -16,7 +16,7 @@ from .infrastructure.providers import (
     OAuthStateAuthSettings,
     SearchEngineSettings,
 )
-from .providers import (
+from app.providers import (
     DBProvider,
     EbayProvider,
     MarketplaceMappingsProvider,
@@ -25,9 +25,9 @@ from .providers import (
     PerplexityToken,
     RedisProvider,
 )
-from .repository.providers import RepositoryProvider
-from .services.ports import IHasher
-from .services.providers import (
+from app.repository.providers import RepositoryProvider
+from app.services.ports import IHasher
+from app.services.providers import (
     SellingServiceSettings,
     ServicesProvider,
 )

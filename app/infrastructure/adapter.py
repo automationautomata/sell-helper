@@ -2,14 +2,14 @@ from dataclasses import dataclass, is_dataclass
 
 from pydantic import TypeAdapter, ValidationError
 
-from ..domain.entities import (
+from app.domain.entities import (
     AspectField,
     AspectType,
     IMetadata,
     Product,
     ProductStructure,
 )
-from ..domain.entities.errors import AspectsValidationError
+from app.domain.entities.errors import AspectsValidationError
 
 
 class ProductAdapterError(Exception):
