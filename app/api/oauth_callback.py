@@ -1,13 +1,14 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, Path, Request, status
 
-from ..data import Marketplace
-from ..domain.ports import (
+from app.data import Marketplace
+from app.domain.ports import (
     IMarketplaceOAuthService,
     InvalidToken,
     MarketplaceOAuthServiceError,
 )
-from ..logger import logger
+from app.logger import logger
+
 from .dependencies import (
     OAuth2ClientMapping,
 )

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from ..services.ports import CategoriesNotFoundError, CategoryPredictorError
+from app.services.ports import CategoriesNotFoundError, CategoryPredictorError
+
 from .api_clients.ebay import (
     EbayCategoriesNotFoundError,
     EbayTaxonomyClient,

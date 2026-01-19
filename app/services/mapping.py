@@ -1,5 +1,5 @@
-from ..domain.dto import AspectValueDTO, MarketplaceAccountDTO, ProductDTO
-from ..domain.entities import MarketplaceAccount, Product
+from app.domain.dto import AspectValueDTO, MarketplaceAccountDTO, ProductDTO
+from app.domain.entities import MarketplaceAccount, Product
 
 
 class FromDTO:

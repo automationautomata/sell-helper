@@ -5,7 +5,8 @@ from typing import Any, Self
 from fastapi import APIRouter, FastAPI, HTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-from ..config import Secrets
+from app.config import Secrets
+
 from . import auth, marketplace_auth, product
 from .errors_handler import http_handler
 from .middlewares import authentication

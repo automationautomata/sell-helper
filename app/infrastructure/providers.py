@@ -11,9 +11,10 @@ from dishka import (
 )
 from perplexity import Perplexity as PerplexityClient
 
-from ..data import Marketplace, OAuth2Settings
-from ..domain.entities import IMarketplaceAspects, IMetadata
-from ..services import ports
+from app.data import Marketplace, OAuth2Settings
+from app.domain.entities import IMarketplaceAspects, IMetadata
+from app.services import ports
+
 from .access_token_storage import RedisAccessTokenStorage
 from .api_clients import ebay as ebay_api
 from .category_predictor import EbayCategoryPredictor

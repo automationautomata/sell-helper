@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 
-from ..domain.dto import ProductCategoriesDTO, ProductDTO
-from ..domain.entities import ProductStructure
-from ..domain.ports import (
+from app.domain.dto import ProductCategoriesDTO, ProductDTO
+from app.domain.entities import ProductStructure
+from app.domain.ports import (
     ProductCategoriesNotFound,
     SearchServiceError,
 )
+
 from .mapping import FromEntity
 from .ports import (
     CategoriesNotFoundError,

@@ -5,8 +5,9 @@ from typing import Literal
 from perplexity import Perplexity as PerplexityClient
 from perplexity import PerplexityError
 
-from ..domain.entities import IMetadata, Product, ProductStructure
-from ..services.ports import SearchEngineError
+from app.domain.entities import IMetadata, Product, ProductStructure
+from app.services.ports import SearchEngineError
+
 from ..utils import recognition
 from .adapter import ProductAdapter, ProductAdapterError
 from .api_clients import barcode

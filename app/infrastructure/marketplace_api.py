@@ -3,11 +3,12 @@ from dataclasses import asdict, dataclass
 
 from pydantic import ValidationError
 
-from ..domain.entities import AspectField, AspectType, Item
-from ..services.ports import (
+from app.domain.entities import AspectField, AspectType, Item
+from app.services.ports import (
     CategoriesNotFoundError,
     MarketplaceAPIError,
 )
+
 from .api_clients.ebay import (
     EbayCommerceClient,
     EbayCommerceClientError,

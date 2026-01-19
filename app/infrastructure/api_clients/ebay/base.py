@@ -4,7 +4,8 @@ import os
 import aiohttp
 import requests
 
-from ....data import OAuth2Settings
+from app.data import OAuth2Settings
+
 from ..utils import request_exception_chain
 from . import models
 

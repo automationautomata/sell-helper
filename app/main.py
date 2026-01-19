@@ -1,6 +1,6 @@
 from dishka.integrations.fastapi import setup_dishka
 
-from . import setup
+from app import setup
 
 config = setup.load_config()
 

@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 import jwt
 from pydantic import TypeAdapter, ValidationError
 
-from ..services.ports import AuthToken, InvalidPayloadTypeError
+from app.services.ports import AuthToken, InvalidPayloadTypeError
 
 
 @dataclass
