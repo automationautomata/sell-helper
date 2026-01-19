@@ -1,31 +1,32 @@
-## API service for selling automatization
+![Coverage](https://img.shields.io/badge/Coverage-89%25-brightgreen)
+## API для публикации товаров на маркетплейсы
 
-<b>Stack:</b> FastAPI, Dishka, SQLAlchemy
+sell-helper – Позволяет пользователю: по-штрихкоду или названию получить предзаполненные метаданные товара (имя, описание, и пр.), посмотреть аналоги, и затем — автоматически опубликовать объявление на маркетплейсе. В качестве системы поиска используется Perplexity API. 
 
-<b>Available marketplaces:</b> Ebay
+<b>Стек</b>
+- Python: Poetry, FastAPI, Dishka, SQLAlchemy, Alembic
+- Тесты: pytest
+- БД: Postgres, Redis
+- Docker
 
-<b>Features:</b>
-- Find a product category by barcode image
-- Find detailed product information
-- Publish product to available marketplaces
-- Access only to whitelisted users
+Проект реализован в соответствии с принципами чистой архитектуры.
 
-### Queries 
+### Примеры основных запросов
 
-<b>Authentication:</b>
+<b>Аутентификация:</b>
 ```bash
 curl -X POST https://"${url}"/api/auth/login \
     -H 'Content-Type: application/json' \
-    -d '{"email": "abc@mail.random", "password": "123"}'
+    -d '{"email": "rand@mail.abc", "password": "123"}'
 ```
-Response:
+Ответ:
 ```json
-{ "token": "<token>", "ttl": 1200 }
+{ "token": "<jwt-token>", "ttl": 1200 }
 ```
 
-<b>Find categories:</b>
+<b>Поиск категорий:</b>
 ```bash
-curl -X POST "https://"${url}"/api/search/<marketplace>/categories" \
+curl -X POST "https://"${url}"/api/product/<marketplace>/recognize" \
   -H "Authorization: Bearer "${token}"" \
   -F "image=@/path/to/image.jpg;type=image/jpeg"
 ```
@@ -35,9 +36,9 @@ Response:
 { "categories": [...], "product_name": "<product-name>" }
 ```
 
-<b>Find informartion about a product:</b>
+<b>Поиск информации о продукте:</b>
 ```bash
-curl -X POST "https://"${url}"/api/search/<marketplace>/product" \
+curl -X POST "https://"${url}"/api/product/<marketplace>/aspects" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer "${token}"" \
   -d '{
@@ -46,7 +47,7 @@ curl -X POST "https://"${url}"/api/search/<marketplace>/product" \
   }'
 ```
 
-Response:
+Ответ:
 ```json
 {
   "metadata": {
@@ -63,9 +64,9 @@ Response:
 }
 
 ```
-<b>Publish a product:</b>
+<b>Публикация продукта</b>
 ```bash
-curl -X POST "https://"${url}"/api/selling/<marketplace>/publish" \
+curl -X POST "https://"${url}"/api/product/<marketplace>/publish" \
   -H "Authorization: Bearer "${token}"" \
   -F 'item={
     "title": "<title>",
@@ -81,13 +82,7 @@ curl -X POST "https://"${url}"/api/selling/<marketplace>/publish" \
   -F "images=@/path/to/image.jpg;type=image/jpeg"
 ```
 
-Response:
+Ответ:
 ```json
 {"status": "success"}
-```
-
-<b>Error response:</b>
-```json
-{ "error": "<error-description>" }
-
 ```
