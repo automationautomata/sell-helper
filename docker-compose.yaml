@@ -1,16 +1,17 @@
 x-defaults: &defaults
-  DB_PORT: ${DB_PORT:-5432}
-  REDIS_PORT: ${REDIS_PORT:-6379}
+  DB_HOST: postgres
+  REDIS_HOST: redis
+  DB_PORT: 5432
+  
 
 services:
   postgres:
     image: postgres:16
+    container_name: postgres
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,6 +22,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    container_name: redis
     ports:
       - "${REDIS_PORT}:6379"
     volumes:
@@ -32,25 +34,25 @@ services:
       retries: 3
 
   migrate:
-    image: ${DOCKER_IMAGE:-app}
-    command: alembic upgrade head
-    env_file:
-      .env
+    build: .
+    environment:
+      <<: *defaults
+    env_file: .env
+    command: migrate alembic upgrade head
+    volumes:
+    - ./app:/app/app
+    - ./alembic.ini:/app/alembic.ini
     depends_on:
       postgres:
         condition: service_healthy
     profiles: ["migrate"]
-
+    
   app:
     build: .
     container_name: backend
-
-    env_file:
-      - .env
+    env_file: .env
     environment:
       <<: *defaults
-      DB_HOST: postgres
-      REDIS_HOST: redis
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"

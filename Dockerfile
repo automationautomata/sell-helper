@@ -1,7 +1,6 @@
 FROM python:3.12-slim as base
 
-ENV POETRY_CACHE_DIR=/app/.cache/pypoetry \
-    VIRTUAL_ENV=/app/.venv \
+ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
     
 RUN apt-get update && \
@@ -34,4 +33,4 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY app ./app
-COPY config ./config
+COPY config/config.yaml ./config/config.yaml
