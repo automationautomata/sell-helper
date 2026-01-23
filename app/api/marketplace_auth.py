@@ -8,6 +8,7 @@ from app.data import Marketplace
 from app.domain.dto import MarketplaceAccountDTO
 from app.domain.ports import (
     IMarketplaceOAuthService,
+    MarketplaceAuthorizationFailed,
     MarketplaceOAuthServiceError,
     MarketplaceUnauthorised,
 )
@@ -64,7 +65,7 @@ async def logout(
     except MarketplaceUnauthorised:
         return MarketplaceLogoutResponse(status="user already logged out")
 
-    except MarketplaceOAuthServiceError as e:
+    except (MarketplaceOAuthServiceError, MarketplaceAuthorizationFailed) as e:
         logger.exception(
             f"Failed to generate token in {marketplace} marketplace "
             f"for user {user_uuid}: {e}",

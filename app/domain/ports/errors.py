@@ -46,15 +46,15 @@ class InvalidProductAspects(InvalidItemStructure):
     pass
 
 
-class MarketplaceAuthorizationFailed(SellingServiceError):
-    pass
-
-
-class UserUnauthorisedInMarketplace(MarketplaceAuthorizationFailed):
-    pass
-
-
 class InvalidCategory(SellingServiceError):
+    pass
+
+
+class MarketplaceAuthorizationFailed(Base):
+    pass
+
+
+class MarketplaceUnauthorised(MarketplaceAuthorizationFailed):
     pass
 
 
@@ -66,5 +66,5 @@ class InvalidToken(MarketplaceOAuthServiceError):
     pass
 
 
-class MarketplaceUnauthorised(MarketplaceOAuthServiceError):
+class MarketplaceAccountServiceError(Base):
     pass

@@ -8,14 +8,14 @@ from .metadata import EbayPackage
 
 @dataclass
 class EbayPolicies:
-    fulfillment_policy_id: str
-    payment_policy_id: str
-    return_policy_id: str
+    fulfillment_policy: str
+    payment_policy: str
+    return_policy: str
 
 
 @dataclass
 class EbayAspects:
-    location_key: str
+    location: str
     marketplace: str
     policies: EbayPolicies
     package: EbayPackage

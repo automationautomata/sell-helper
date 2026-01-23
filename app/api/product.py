@@ -20,13 +20,15 @@ from app.domain.dto import ItemDTO, MarketplaceAccountDTO
 from app.domain.ports import (
     InvalidCategory,
     InvalidItemStructure,
+    InvalidMarketplaceAspects,
+    InvalidProductAspects,
     ISearchService,
     ISellingService,
     MarketplaceAuthorizationFailed,
+    MarketplaceUnauthorised,
     SearchServiceError,
     SellingServiceError,
 )
-from app.domain.ports.errors import InvalidMarketplaceAspects, InvalidProductAspects
 from app.logger import logger
 
 from ..utils import utils
@@ -187,6 +189,7 @@ async def publish_item(
             detail_mapping = {
                 InvalidCategory: f"Invalid category: {item.category}",
                 MarketplaceAuthorizationFailed: f"User unauthorised in {marketplace}",
+                MarketplaceUnauthorised: f"User unauthorised in {marketplace}",
                 InvalidProductAspects: "Invalid product aspects",
                 InvalidMarketplaceAspects: "Invalid marketplace aspects",
             }

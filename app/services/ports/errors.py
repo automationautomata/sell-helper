@@ -14,6 +14,10 @@ class MarketplaceAPIError(Exception):
     pass
 
 
+class AccountSettingsNotFound(Exception):
+    pass
+
+
 class CategoryNotFound(MarketplaceAPIError):
     pass
 

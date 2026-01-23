@@ -28,8 +28,8 @@ from app.providers import (
 from app.repository.providers import RepositoryProvider
 from app.services.ports import IHasher
 from app.services.providers import (
-    SellingServiceSettings,
     ServicesProvider,
+    TokenUpdateSettings,
 )
 
 
@@ -38,9 +38,8 @@ def load_config() -> Config:
 
 
 def app(config: Config) -> FastAPI:
-    builder = AppBuilder(root_path="/api")
-    builder.root_router().middlewares(config.secrets)
-    return builder.get_app()
+    app = AppBuilder(root_path="/api").root_router().middlewares(config.secrets).app()
+    return app
 
 
 def container(config: Config) -> AsyncContainer:
@@ -70,7 +69,7 @@ def container(config: Config) -> AsyncContainer:
             barcode_search_token=config.tokens.barcode_search_token,
             perplexity_model=ext_services.perplexity.model,
         ),
-        SellingServiceSettings: SellingServiceSettings(
+        TokenUpdateSettings: TokenUpdateSettings(
             token_ttl_threshold=timedelta(hours=1, minutes=40).total_seconds()
         ),
         OAuthStateAuthSettings: OAuthStateAuthSettings(5, "HS256", config.secrets.jwt),
