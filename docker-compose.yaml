@@ -34,7 +34,7 @@ services:
       retries: 3
 
   migrate:
-    build: .
+    build: back
     environment:
       <<: *defaults
     env_file: .env
@@ -47,21 +47,30 @@ services:
         condition: service_healthy
     profiles: ["migrate"]
     
-  app:
-    build: .
+  backend:
+    build: back
     container_name: backend
     env_file: .env
     environment:
       <<: *defaults
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
-    ports:
-      - "8000:8000"
-    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: front
+    container_name: frontend
+    environment:
+      API_URL: http://backend:8000/api
+    ports:
+      - "8000:80"
+    restart: unless-stopped
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

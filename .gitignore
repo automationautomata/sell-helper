@@ -1,4 +1,5 @@
 .env
 .vscode
 __pycache__
-config/config.yaml
+config.yaml
+jsconfig.json

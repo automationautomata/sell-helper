@@ -10,7 +10,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import api from "../api/api";
+import api from "@/api";
 
 const email = ref("");
 const password = ref("");
@@ -21,7 +21,7 @@ const login = () => {
   api
     .post("/auth/login", { email: email.value, password: password.value })
     .then((res) => {
-      localStorage.setItem("token", res.data.token); // Only essential
+      localStorage.setItem("token", res.data.token);
       router.push("/recognize");
     })
     .catch(() => {

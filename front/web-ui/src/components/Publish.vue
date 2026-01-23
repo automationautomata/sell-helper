@@ -42,8 +42,8 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import api from '../api/api';
-import { useProductStore } from '../stores/product';
+import api from '@/api';
+import useProductStore from '@/storage';
 
 const title = ref('');
 const category = ref('');

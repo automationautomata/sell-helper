@@ -19,7 +19,7 @@ FROM base AS builder
 
 WORKDIR /app
 
-COPY pyproject.toml .
+COPY pyproject.toml poetry.lock ./
 
 RUN python -m pip install --no-cache-dir poetry==2.0.0 &&  \
     poetry config virtualenvs.in-project true && \

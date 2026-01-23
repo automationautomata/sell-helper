@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 
-export const useProductStore = defineStore('product', {
+const useProductStore = defineStore('product', {
   state: () => ({
     productName: null,
     aspects: {},   
@@ -12,3 +12,5 @@ export const useProductStore = defineStore('product', {
     clear() { this.productName = null; this.aspects = {}; },
   },
 });
+
+export default useProductStore;

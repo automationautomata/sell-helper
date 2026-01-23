@@ -14,8 +14,8 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import api from '../api/api';
-import { useProductStore } from '../stores/product';
+import api from '@/api';
+import useProductStore from '@/storage';
 
 const marketplace = ref('ozon');
 const category = ref('');
