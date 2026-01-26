@@ -6,6 +6,9 @@
           <span class="brand-icon">📦</span>
         </div>
         <div v-if="isLoggedIn" class="navbar-actions">
+          <router-link to="/marketplace" class="nav-link" :class="{ active: $route.path === '/marketplace' }">
+            Marketplace
+          </router-link>
           <router-link to="/recognize" class="nav-link" :class="{ active: $route.path === '/recognize' }">
             Recognize
           </router-link>

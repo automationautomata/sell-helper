@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, TEMP_DIR);
   },
-  filename: (req, file, cb) => {
+  filename: (_, file, cb) => {
     cb(
       null,
       `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(file.originalname)}`
@@ -54,9 +54,7 @@ app.post(
   "/product/:marketplace/recognize",
   auth,
   upload.single("image"),
-  (req, res) => {
-    console.log("TEMP FILE:", req.file.path);
-
+  (_, res) => {
     res.json({
       product_name: "Wireless Headphones",
       categories: ["Electronics", "Audio", "Headphones"],
@@ -64,7 +62,7 @@ app.post(
   }
 );
 
-app.post("/product/:marketplace/aspects", auth, (req, res) => {
+app.post("/product/:marketplace/aspects", auth, (_, res) => {
   res.json({
     metadata: {
       description: "High quality wireless headphones",
@@ -87,14 +85,7 @@ app.post(
   auth,
   upload.array("images"),
   (req, res) => {
-    const item = JSON.parse(req.body.item);
-
-    console.log("PUBLISH ITEM:", item);
-    console.log(
-      "TEMP IMAGES:",
-      req.files.map((f) => f.path)
-    );
-
+    const _ = JSON.parse(req.body.item);
     res.json({ status: "success" });
   }
 );

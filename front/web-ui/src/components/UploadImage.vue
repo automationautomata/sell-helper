@@ -5,23 +5,15 @@
     
     <div
       class="upload-container"
-      @click="triggerFile"
-      @dragover.prevent="dragOver = true"
-      @dragleave.prevent="dragOver = false"
+      @dragenter.prevent="onDragEnter"
+      @dragover.prevent="onDragOver"
+      @dragleave.prevent="onDragLeave"
       @drop.prevent="onDrop"
-      :class="{ dragover }"
+      :class="{ dragover: dragOver }"
     >
-      <input
-        type="file"
-        ref="fileInput"
-        multiple
-        @change="onFileChange"
-        accept="image/*"
-      />
       <div class="upload-content">
         <div class="upload-icon">🖼️</div>
         <p class="upload-main-text">Drag & drop images here</p>
-        <p class="upload-sub-text">or click to browse</p>
         <p class="upload-hint">Supported formats: JPG, PNG, GIF (Max 10MB each)</p>
       </div>
     </div>
@@ -52,29 +44,51 @@
 <script setup>
 import { ref } from "vue";
 
-const fileInput = ref(null);
+const emit = defineEmits(['file-added']);
+
 const files = ref([]);
 const previews = ref([]);
 const dragOver = ref(false);
 
-const triggerFile = () => fileInput.value.click();
+const onDragEnter = () => {
+  dragOver.value = true;
+};
 
-const onFileChange = (event) => handleFiles(event.target.files);
+const onDragOver = (event) => {
+  event.dataTransfer.dropEffect = 'copy';
+  dragOver.value = true;
+};
+
+const onDragLeave = () => {
+  dragOver.value = false;
+};
 
 const onDrop = (event) => {
   dragOver.value = false;
-  handleFiles(event.dataTransfer.files);
+  event.dataTransfer.dropEffect = 'copy';
+  const droppedFiles = event.dataTransfer.files;
+  console.log('Files dropped:', droppedFiles);
+  handleFiles(droppedFiles);
 };
 
 const handleFiles = (selectedFiles) => {
+  console.log('handleFiles called with:', selectedFiles);
   for (let f of selectedFiles) {
+    console.log('Processing file:', f.name, f.type, f.size);
     if (f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024) {
       files.value.push(f);
       const reader = new FileReader();
-      reader.onload = e => previews.value.push(e.target.result);
+      reader.onload = e => {
+        console.log('Preview added for:', f.name);
+        previews.value.push(e.target.result);
+        emit('file-added', { file: f, preview: e.target.result });
+      };
       reader.readAsDataURL(f);
+    } else {
+      console.log('File rejected:', f.name);
     }
   }
+  console.log('Total files:', files.value.length);
 };
 
 const removeImage = (index) => {
@@ -126,10 +140,6 @@ defineExpose({ files, previews });
 .upload-container.dragover {
   border-color: #333;
   background: #f0f0f0;
-}
-
-.upload-container input[type="file"] {
-  display: none;
 }
 
 .upload-content {

@@ -67,65 +67,45 @@ const error = ref("");
 const loading = ref(false);
 const router = useRouter();
 
-const login = async () => {
+const login = () => {
   if (!email.value || !password.value) return;
 
   loading.value = true;
   error.value = "";
 
-  try {
-    const res = await api.post("/auth/login", {
-      email: email.value,
-      password: password.value,
+  api.post("/auth/login", {
+    email: email.value,
+    password: password.value,
+  })
+    .then(res => {
+      localStorage.setItem("token", res.data.token);
+      router.push("/marketplace");
+    })
+    .catch(() => {
+      error.value = "Invalid email or password";
+      password.value = "";
+    })
+    .finally(() => {
+      loading.value = false;
     });
-    localStorage.setItem("token", res.data.token);
-    router.push("/recognize");
-  } catch (err) {
-    error.value = "Invalid email or password";
-    password.value = "";
-  } finally {
-    loading.value = false;
-  }
 };
 </script>
 
 <style scoped>
 .login-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
   padding: 20px;
-  background: #f5f5f5;
 }
 
 .login-card {
-  margin: 0;
   max-width: 420px;
-  width: 100%;
-}
-
-.login-header {
-  text-align: center;
-  margin-bottom: 24px;
 }
 
 .login-icon {
-  font-size: 2.5rem;
-  display: block;
   margin-bottom: 12px;
 }
 
 .login-header h2 {
-  margin-bottom: 6px;
   font-size: 1.6rem;
-  color: #333;
-}
-
-.subtitle {
-  color: #777;
-  font-size: 0.9rem;
-  margin: 0;
 }
 
 .login-form {
@@ -135,40 +115,13 @@ const login = async () => {
   margin-bottom: 16px;
 }
 
-.form-group input:focus {
-  border-color: #333;
-}
-
-.error-box {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 6px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #dc2626;
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
 .error-icon {
-  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .btn-login {
   width: 100%;
-  padding: 12px 16px;
-  font-size: 1rem;
   margin-top: 6px;
-}
-
-.btn-login:not(:disabled):hover {
-  background: #555;
-}
-
-.loading-spinner {
-  display: inline-block;
 }
 
 .login-footer {
@@ -192,14 +145,6 @@ const login = async () => {
 }
 
 @media (max-width: 480px) {
-  .login-card {
-    padding: 24px !important;
-  }
-
-  .login-icon {
-    font-size: 2rem;
-  }
-
   .login-header h2 {
     font-size: 1.3rem;
   }
