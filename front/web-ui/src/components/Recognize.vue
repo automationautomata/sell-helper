@@ -105,13 +105,9 @@ const selectedCategory = ref("");
 const loadingAspects = ref(false);
 const aspectsError = ref("");
 
-const marketplace = ref(productStore.marketplace || "ozon");
+const marketplace = ref(productStore.marketplace);
 
 const recognizeImage = () => {
-  console.log("File:", file.value);
-  console.log("Upload component:", uploadComponent.value);
-  console.log("Files array:", uploadComponent.value?.files);
-  
   if (!file.value) {
     recognitionError.value = "Please upload an image first";
     return;

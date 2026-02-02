@@ -11,7 +11,6 @@ const TEMP_DIR = fs.mkdtempSync(
   path.join(os.tmpdir(), "mock-api-uploads-")
 );
 
-
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, TEMP_DIR);
@@ -50,6 +49,20 @@ const auth = (req, res, next) => {
   next();
 };
 
+app.get(
+  '/oauth/login/:marketplace', 
+  auth, 
+  (req, res) => {
+  res.redirect(301, '/oauth-mock');
+});
+
+app.get(
+  '/oauth/oauthmock', 
+  auth, 
+  (req, res) => {
+  res.json({ status: "ok" });
+});
+
 app.post(
   "/product/:marketplace/recognize",
   auth,
@@ -62,22 +75,25 @@ app.post(
   }
 );
 
-app.post("/product/:marketplace/aspects", auth, (_, res) => {
-  res.json({
-    metadata: {
-      description: "High quality wireless headphones",
-    },
-    metadata_type: "Metadata",
-    product: {
-      aspects: {
-        Brand: "Sony",
-        Color: "Black",
-        Connectivity: "Bluetooth",
-        Condition: "New",
+app.post(
+  "/product/:marketplace/aspects", 
+  auth, 
+  (_, res) => {
+    res.json({
+      metadata: {
+        description: "High quality wireless headphones",
       },
-      required: ["Brand", "Color", "Connectivity"],
-    },
-  });
+      metadata_type: "Metadata",
+      product: {
+        aspects: {
+          Brand: "Sony",
+          Color: "Black",
+          Connectivity: "Bluetooth",
+          Condition: "New",
+        },
+        required: ["Brand", "Color", "Connectivity"],
+      },
+    });
 });
 
 app.post(

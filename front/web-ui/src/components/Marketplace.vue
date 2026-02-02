@@ -21,11 +21,11 @@
 
     <div class="action-buttons">
       <button 
-        @click="proceed" 
+        @click="login" 
         :disabled="!selectedMarketplace"
         class="btn-proceed"
       >
-        Continue to Recognition
+        Login and Continue
       </button>
     </div>
 
@@ -34,12 +34,12 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 import useProductStore from '@/storage';
+import api from '@/api';
 
-const router = useRouter();
 const productStore = useProductStore();
 const selectedMarketplace = ref('');
+const isLoggingIn = ref(false);
 
 const marketplaces = [
   {
@@ -72,11 +72,18 @@ const selectMarketplace = (id) => {
   selectedMarketplace.value = id;
 };
 
-const proceed = () => {
-  if (selectedMarketplace.value) {
-    productStore.setMarketplace(selectedMarketplace.value);
-    router.push('/recognize');
-  }
+const login = () => {
+  if (!selectedMarketplace.value) return;
+  
+  isLoggingIn.value = true;
+  productStore.setMarketplace(selectedMarketplace.value);
+  
+  api.get(`/login/${selectedMarketplace.value}`)
+    .then(() => {
+      window.open(url);
+      router.push("/recognize");
+    })
+  
 };
 </script>
 
