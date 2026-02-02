@@ -1,7 +1,7 @@
 <template>
   <div class="container marketplace-card">
     <div class="marketplace-header">
-      <h2>🏪 Select Marketplace</h2>
+      <h2>Select Marketplace</h2>
       <p class="subtitle">Choose which marketplace to publish on</p>
     </div>
 
@@ -14,20 +14,17 @@
       >
         <div class="marketplace-icon">{{ mp.icon }}</div>
         <span class="marketplace-name">{{ mp.name }}</span>
-        <p class="marketplace-desc">{{ mp.description }}</p>
         <span v-if="selectedMarketplace === mp.id" class="check-mark">✓</span>
       </div>
     </div>
 
-    <div class="action-buttons">
-      <button 
-        @click="login" 
-        :disabled="!selectedMarketplace"
-        class="btn-proceed"
-      >
-        Login and Continue
-      </button>
-    </div>
+    <button 
+      @click="login" 
+      :disabled="!selectedMarketplace"
+      class="btn-proceed"
+    >
+      Login and Continue
+    </button>
 
   </div>
 </template>
@@ -46,25 +43,16 @@ const marketplaces = [
     id: 'ozon',
     name: 'Ozon',
     icon: '🛒',
-    description: 'Russian online marketplace'
   },
   {
     id: 'ebay',
     name: 'eBay',
-    icon: '🌐',
-    description: 'Global online auction & shopping'
-  },
-  {
-    id: 'amazon',
-    name: 'Amazon',
-    icon: '📦',
-    description: 'E-commerce and cloud computing'
+    icon: '🛒',
   },
   {
     id: 'aliexpress',
     name: 'AliExpress',
-    icon: '🌏',
-    description: 'Chinese online retail platform'
+    icon: '🛒',
   }
 ];
 
@@ -128,19 +116,6 @@ const login = () => {
   font-weight: 600;
   color: #333;
   font-size: 1rem;
-}
-
-.marketplace-desc {
-  color: #888;
-  font-size: 0.8rem;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
 }
 
 .btn-proceed {

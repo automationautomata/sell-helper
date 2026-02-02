@@ -50,7 +50,7 @@
       </form>
 
       <div class="login-footer">
-        <p>Don't have an account? <span class="highlight">Contact administrator</span></p>
+        <p><router-link to="/registration" class="highlight">Register</router-link></p>
       </div>
     </div>
   </div>

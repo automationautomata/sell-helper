@@ -13,9 +13,6 @@
     <main class="main-content">
       <router-view />
     </main>
-    <footer class="app-footer">
-      <p>&copy; 2026 eBay Publisher. All rights reserved.</p>
-    </footer>
   </div>
 </template>
 

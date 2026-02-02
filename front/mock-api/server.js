@@ -23,12 +23,15 @@ const storage = multer.diskStorage({
   },
 });
 
+
 const upload = multer({ storage });
 
 app.use(cors());
 app.use(express.json());
 
-app.post("/auth/login", (req, res) => {
+app.post(
+  "/auth/login", 
+  (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -40,6 +43,22 @@ app.post("/auth/login", (req, res) => {
     ttl: 1200,
   });
 });
+
+app.post(
+  "/auth/registration", 
+  (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "Missing credentials" });
+  }
+
+  res.json({
+    token: "mock-jwt-token-123",
+    ttl: 1200,
+  });
+});
+
 
 const auth = (req, res, next) => {
   const header = req.headers.authorization;
