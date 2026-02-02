@@ -28,6 +28,7 @@
         Continue to Recognition
       </button>
     </div>
+
   </div>
 </template>
 
@@ -139,6 +140,7 @@ const proceed = () => {
   padding: 12px 24px;
   font-size: 0.95rem;
 }
+
 
 @media (max-width: 768px) {
   .marketplace-card {

@@ -1,6 +1,6 @@
 import uuid
 
-from dishka import FromDishka
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from ..data import Marketplace
@@ -17,7 +17,7 @@ from .models.responses import MarketplaceAccountSettingsResponse
 
 PREFIX = "/settings"
 
-router = APIRouter(prefix=PREFIX)
+router = APIRouter(route_class=DishkaRoute, prefix=PREFIX)
 
 
 @router.get("/{marketplace}")

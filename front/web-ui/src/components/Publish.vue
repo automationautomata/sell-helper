@@ -124,24 +124,34 @@
 
     <Aspects />
 
+    <AccountSettings v-model="showSettings" />
+
     <transition name="slide">
       <div v-if="successMessage" class="success-message">
         ✅ {{ successMessage }}
       </div>
     </transition>
-
-    <div class="form-actions">
-      <button
-        @click="publish"
-        :disabled="!canPublish || publishing"
-        class="btn-publish"
+    <button
+      @click="publish"
+      :disabled="!canPublish || publishing"
+      class="btn"
+    >
+      <span v-if="!publishing">🚀 Publish Product</span>
+      <span v-else>Publishing...</span>
+    </button>
+    
+    <div class="action-buttons">
+      <button 
+        @click="showSettings = true" 
+        :disabled="isSettingsDisabled()"
+        class="btn-settings"
       >
-        <span v-if="!publishing">🚀 Publish Product</span>
-        <span v-else>Publishing...</span>
+        ⚙️ Settings
       </button>
+
       <button
         @click="goBack"
-        class="btn-back"
+        class="btn"
         :disabled="publishing"
       >
         ⬅️ Go Back
@@ -162,10 +172,12 @@ import UploadImage from "@/components/UploadImage.vue";
 import Recommendations from "@/components/Recommendations.vue";
 import Aspects from "@/components/Aspects.vue";
 import api from "@/api";
+import AccountSettings from '@/components/AccountSettings.vue';
 
 const router = useRouter();
 const productStore = useProductStore();
 const uploadComp = ref(null);
+const showSettings = ref(false);
 
 const title = ref("");
 const category = ref("");
@@ -182,7 +194,7 @@ if (productStore.selectedCategory) {
   category.value = productStore.selectedCategory;
 }
 
-const aspectKeys = computed(() => Object.keys(productStore.aspects || {}));
+// const aspectKeys = computed(() => Object.keys(productStore.aspects || {}));
 
 const canPublish = computed(() =>
   title.value.trim() &&
@@ -192,6 +204,7 @@ const canPublish = computed(() =>
   quantity.value > 0 &&
   uploadComp.value?.files?.length > 0
 );
+const isSettingsDisabled = () => productStore.selectedMarketplace;
 
 const publish = () => {
   if (!canPublish.value) return;
@@ -236,6 +249,7 @@ const publish = () => {
 const goBack = () => {
   router.push("/recognize");
 };
+
 </script>
 
 <style scoped>
@@ -299,20 +313,21 @@ const goBack = () => {
   align-self: flex-start;
 }
 
-.btn-publish {
-  background: #333;
-}
-
-.btn-publish:hover:not(:disabled) {
-  background: #555;
-}
-
-.btn-back {
+.btn {
   background: #666;
 }
 
-.btn-back:hover:not(:disabled) {
+.btn:hover:not(:disabled) {
   background: #777;
+}
+
+.btn-settings:hover:not(:disabled) {
+  background: #777;
+}
+
+.btn-settings:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .slide-enter-active, .slide-leave-active {
@@ -327,6 +342,12 @@ const goBack = () => {
 .slide-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {
@@ -354,7 +375,7 @@ const goBack = () => {
 
   .form-actions {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 15px;
   }
 
   .publish-header h2 {

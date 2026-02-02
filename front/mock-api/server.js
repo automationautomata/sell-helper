@@ -90,6 +90,14 @@ app.post(
   }
 );
 
+app.get(
+  "/settings/:marketplace",
+  auth,
+  (req, res) => {
+    res.json({settings: {"test": ["value 1", "value 2"], "other": ["another"]} });
+  }
+);
+
 const cleanup = () => {
   console.log("Cleaning temp dir...");
   fs.rmSync(TEMP_DIR, { recursive: true, force: true });
